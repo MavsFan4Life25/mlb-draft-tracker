@@ -347,6 +347,7 @@
         let filteredPlayers = [];
         let socket = null;
         let positions = new Set();
+        let data = null; // Global data variable to prevent ReferenceError
 
         // Initialize the application
         function init() {
@@ -367,8 +368,9 @@
                 updateConnectionStatus('Disconnected', 'error');
             });
 
-            socket.on('dataUpdate', (data) => {
-                handleDataUpdate(data);
+            socket.on('dataUpdate', (socketData) => {
+                console.log('Socket data received:', socketData);
+                handleDataUpdate(socketData);
             });
         }
 
@@ -418,7 +420,13 @@
 
         // Handle data updates
         function handleDataUpdate(data) {
+            console.log('handleDataUpdate called with:', data);
+            if (!data || typeof data !== 'object') {
+                console.error('Invalid data received:', data);
+                return;
+            }
             allPlayers = data.players || [];
+            console.log('allPlayers set to:', allPlayers.length, 'players');
             updateStats();
             populatePositionFilter();
             filterPlayers();

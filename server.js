@@ -27,7 +27,7 @@ app.use(express.static('frontend'));
 
 // Configuration
 const SHEET_ID = process.env.SPREADSHEET_ID || process.env.SHEET_ID || '1XS51hUBt5rUoCJGZCgQhnzUCvLN3zDczwNC0yV4hz9I';
-const SHEET_RANGE = process.env.SHEET_RANGE || 'Draft Picks!A1:D1000';
+const SHEET_RANGE = process.env.SHEET_RANGE || 'Draft Picks!A1:Z1000';
 
 // Debug environment variables
 console.log('Environment check:');
@@ -267,6 +267,12 @@ updateData().then(() => {
 }).catch(error => {
   console.error('Initial data load failed:', error);
 });
+
+// Force data refresh every 5 minutes for debugging
+setInterval(() => {
+  console.log('Forcing data refresh...');
+  updateData();
+}, 5 * 60 * 1000);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

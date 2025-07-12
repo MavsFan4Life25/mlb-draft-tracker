@@ -6,6 +6,7 @@ const cheerio = require('cheerio');
 const http = require('http');
 const socketIo = require('socket.io');
 const cron = require('node-cron');
+const MLBDraftScraper = require('./mlb-scraper');
 require('dotenv').config();
 
 const app = express();
@@ -83,11 +84,11 @@ async function fetchPlayersFromSheet() {
         player[key] = row[index] || '';
       });
       
-      // Add missing fields with default values for compatibility
-      if (!player.Height) player.Height = 'N/A';
-      if (!player.Weight) player.Weight = 'N/A';
-      if (!player.Bats) player.Bats = 'N/A';
-      if (!player.Throws) player.Throws = 'N/A';
+      // Ensure we have the required fields for the app
+      if (!player.Name) player.Name = 'Unknown Player';
+      if (!player.Position) player.Position = 'N/A';
+      if (!player.School) player.School = 'N/A';
+      if (!player.Rank) player.Rank = 'N/A';
       
       return player;
     });
@@ -105,107 +106,58 @@ function getSampleData() {
       Name: 'Charlie Condon',
       Position: 'OF/1B',
       School: 'Georgia',
-      Height: '6-6',
-      Weight: '216',
-      Bats: 'R',
-      Throws: 'R'
+      Rank: '1'
     },
     {
       Name: 'Corey Collins',
       Position: 'C',
       School: 'Georgia',
-      Height: '6-3',
-      Weight: '220',
-      Bats: 'L',
-      Throws: 'R'
+      Rank: '15'
     },
     {
       Name: 'Kolten Smith',
       Position: 'RHP',
       School: 'Georgia',
-      Height: '6-3',
-      Weight: '225',
-      Bats: 'R',
-      Throws: 'R'
+      Rank: '45'
     },
     {
       Name: 'Fernando Gonzalez',
       Position: 'C',
       School: 'Georgia',
-      Height: '5-11',
-      Weight: '200',
-      Bats: 'R',
-      Throws: 'R'
+      Rank: '78'
     }
   ];
 }
 
-// Scrape MLB Draft Tracker
+// Scrape MLB Draft Tracker using the new scraper
 async function scrapeMLBDraftPicks() {
   try {
-    console.log('Scraping MLB Draft Tracker...');
-    const response = await axios.get(MLB_DRAFT_URL, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      },
-      timeout: 10000
-    });
+    console.log('Scraping MLB Draft Tracker with enhanced scraper...');
+    const scraper = new MLBDraftScraper();
+    const picks = await scraper.scrapeDraftData();
+    
+    // Convert to the format expected by the rest of the application
+    const formattedPicks = picks.map(pick => ({
+      pickNumber: pick.pickNumber,
+      playerName: pick.playerName,
+      team: pick.team,
+      position: pick.position,
+      timestamp: pick.timestamp
+    }));
 
-    const $ = cheerio.load(response.data);
-    const picks = [];
-
-    // Try multiple selectors to find draft picks
-    const selectors = [
-      '.draft-pick',
-      '.pick-item',
-      '[data-testid*="pick"]',
-      '.draft-tracker-pick',
-      '.mlb-draft-pick',
-      '.pick',
-      '.round-pick'
-    ];
-
-    for (const selector of selectors) {
-      $(selector).each((index, element) => {
-        const $el = $(element);
-        const pickNumber = $el.find('.pick-number, .round-pick, .pick-num').text().trim();
-        const playerName = $el.find('.player-name, .name, .player').text().trim();
-        const team = $el.find('.team-name, .franchise, .team').text().trim();
-        const position = $el.find('.position, .pos').text().trim();
-
-        if (playerName && playerName !== 'TBD' && playerName !== 'To be determined') {
-          picks.push({
-            pickNumber: pickNumber || `Pick ${picks.length + 1}`,
-            playerName: playerName,
-            team: team || 'Unknown',
-            position: position || 'Unknown',
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
-
-      if (picks.length > 0) break;
+    console.log(`Found ${formattedPicks.length} draft picks`);
+    
+    // Update Google Sheet if credentials are available
+    if (process.env.GOOGLE_CREDENTIALS && process.env.SPREADSHEET_ID) {
+      try {
+        await scraper.updateGoogleSheet(picks);
+        console.log('Successfully updated Google Sheet with draft data');
+      } catch (sheetError) {
+        console.error('Error updating Google Sheet:', sheetError);
+      }
     }
-
-    // If no picks found, try alternative approach
-    if (picks.length === 0) {
-      console.log('No picks found with standard selectors, trying alternative approach...');
-      $('body').find('*').each((index, element) => {
-        const text = $(element).text().trim();
-        if (text.includes('Round') && text.includes('Pick') && text.length < 200) {
-          picks.push({
-            pickNumber: text,
-            playerName: 'To be determined',
-            team: 'Unknown',
-            position: 'Unknown',
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
-    }
-
-    console.log(`Found ${picks.length} draft picks`);
-    return picks;
+    
+    return formattedPicks;
   } catch (error) {
     console.error('Error scraping MLB Draft Tracker:', error);
     return [];
@@ -218,17 +170,30 @@ function updatePlayerDraftStatus(players, picks) {
     const matchingPick = picks.find(pick => {
       const pickName = pick.playerName.toLowerCase();
       const playerName = player.Name ? player.Name.toLowerCase() : '';
+      const playerSchool = player.School ? player.School.toLowerCase() : '';
       
-      // Try exact match first
+      // Try exact name match first
       if (pickName === playerName) return true;
       
-      // Try partial matches
+      // Try partial name matches
       if (pickName.includes(playerName) || playerName.includes(pickName)) return true;
       
       // Try matching last names
       const pickLastName = pickName.split(' ').pop();
       const playerLastName = playerName.split(' ').pop();
       if (pickLastName && playerLastName && pickLastName === playerLastName) return true;
+      
+      // If we have school info from MLB, try matching by school too
+      if (pick.school && playerSchool) {
+        const pickSchool = pick.school.toLowerCase();
+        if (pickSchool === playerSchool || pickSchool.includes(playerSchool) || playerSchool.includes(pickSchool)) {
+          // If schools match, be more lenient with name matching
+          const nameSimilarity = pickName.split(' ').some(namePart => 
+            playerName.includes(namePart) || namePart.includes(playerName.split(' ')[0])
+          );
+          if (nameSimilarity) return true;
+        }
+      }
       
       return false;
     });
@@ -371,20 +336,14 @@ app.get('/api/test', (req, res) => {
       Name: 'Charlie Condon',
       Position: 'OF/1B',
       School: 'Georgia',
-      Height: '6-6',
-      Weight: '216',
-      Bats: 'R',
-      Throws: 'R',
+      Rank: '1',
       isDrafted: false
     },
     {
       Name: 'Corey Collins',
       Position: 'C',
       School: 'Georgia',
-      Height: '6-3',
-      Weight: '220',
-      Bats: 'L',
-      Throws: 'R',
+      Rank: '15',
       isDrafted: false
     }
   ];

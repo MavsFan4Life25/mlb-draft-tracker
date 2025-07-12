@@ -93,6 +93,33 @@
             align-items: center;
         }
 
+        .sort-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .sort-button {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--primary-white);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sort-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .sort-button.active {
+            background: var(--uga-red);
+            border-color: var(--uga-red);
+        }
+
         .filter-group {
             display: flex;
             align-items: center;
@@ -327,6 +354,13 @@
             </div>
         </div>
 
+        <div class="sort-controls">
+            <span style="font-weight: 500; margin-right: 0.5rem;">Sort by:</span>
+            <button class="sort-button active" data-sort="rank">Rank</button>
+            <button class="sort-button" data-sort="name">Name</button>
+            <button class="sort-button" data-sort="school">School</button>
+        </div>
+
         <div id="errorMessage" class="error" style="display: none;"></div>
         
         <div id="loadingMessage" class="loading">
@@ -348,6 +382,7 @@
         let socket = null;
         let positions = new Set();
         let data = null; // Global data variable to prevent ReferenceError
+        let currentSort = 'rank'; // Default sort by rank
 
         // Initialize the application
         function init() {
@@ -393,6 +428,14 @@
             document.getElementById('positionFilter').addEventListener('change', filterPlayers);
             document.getElementById('statusFilter').addEventListener('change', filterPlayers);
             document.getElementById('searchBox').addEventListener('input', filterPlayers);
+            
+            // Add sort button listeners
+            document.querySelectorAll('.sort-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const sortType = e.target.dataset.sort;
+                    setSort(sortType);
+                });
+            });
         }
 
         // Load initial data
@@ -502,7 +545,40 @@
                 return true;
             });
 
+            sortPlayers();
             renderPlayers();
+        }
+
+        // Set sort type
+        function setSort(sortType) {
+            currentSort = sortType;
+            
+            // Update button states
+            document.querySelectorAll('.sort-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.querySelector(`[data-sort="${sortType}"]`).classList.add('active');
+            
+            sortPlayers();
+            renderPlayers();
+        }
+
+        // Sort players
+        function sortPlayers() {
+            filteredPlayers.sort((a, b) => {
+                switch (currentSort) {
+                    case 'rank':
+                        const rankA = parseInt(a.Rank) || 9999;
+                        const rankB = parseInt(b.Rank) || 9999;
+                        return rankA - rankB;
+                    case 'name':
+                        return (a.Name || '').localeCompare(b.Name || '');
+                    case 'school':
+                        return (a.School || '').localeCompare(b.School || '');
+                    default:
+                        return 0;
+                }
+            });
         }
 
         // Render players
@@ -547,7 +623,10 @@
 
             return `
                 <div class="${cardClass}">
-                    <div class="player-name">${player.Name || 'Unknown Player'}</div>
+                    <div class="player-name">
+                        ${player.Name || 'Unknown Player'}
+                        ${player.Rank ? `<span style="font-size: 0.8rem; opacity: 0.8; margin-left: 0.5rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">#${player.Rank}</span>` : ''}
+                    </div>
                     <div class="player-info">
                         <div class="info-item">
                             <span class="info-label">Position:</span>
@@ -558,20 +637,8 @@
                             <span class="info-value">${player.School || 'N/A'}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Height:</span>
-                            <span class="info-value">${player.Height || 'N/A'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Weight:</span>
-                            <span class="info-value">${player.Weight || 'N/A'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Bats:</span>
-                            <span class="info-value">${player.Bats || 'N/A'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Throws:</span>
-                            <span class="info-value">${player.Throws || 'N/A'}</span>
+                            <span class="info-label">Rank:</span>
+                            <span class="info-value">${player.Rank || 'N/A'}</span>
                         </div>
                     </div>
                     ${draftInfoHtml}

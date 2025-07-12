@@ -243,8 +243,8 @@ async function updateData() {
 }
 
 // Schedule updates during draft time (July 13th, 6:00 PM EST onwards)
-const DRAFT_START_TIME = new Date('2024-07-13T18:00:00-04:00');
-const DRAFT_END_TIME = new Date('2024-07-15T23:59:59-04:00');
+const DRAFT_START_TIME = new Date('2025-07-13T18:00:00-04:00');
+const DRAFT_END_TIME = new Date('2025-07-15T23:59:59-04:00');
 
 function isDraftTime() {
   const now = new Date();

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TESTING UPDATES - Georgia Bulldogs MLB Draft Tracker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --primary-black: #000000;
+            --primary-white: #FFFFFF;
+            --light-gray: #F5F5F5;
+            --dark-gray: #333333;
+            --medium-gray: #666666;
+            --success-green: #28a745;
+            --warning-yellow: #ffc107;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-black);
+            min-height: 100vh;
+            color: var(--primary-white);
+            border: 20px solid red !important;
+        }
+
+        .header {
+            background: var(--dark-gray);
+            padding: 1rem 0;
+            text-align: center;
+            border-bottom: 3px solid var(--primary-white);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-white);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        select, input {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--uga-white);
+            font-size: 0.9rem;
+        }
+
+        select option {
+            background: var(--dark-gray);
+            color: var(--primary-white);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-green);
+            animation: pulse 2s infinite;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .player-card.drafted {
+            border-color: var(--success-green);
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .player-card.drafted::before {
+            content: 'DRAFTED';
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--success-green);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 0 12px 0 8px;
+        }
+
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary-white);
+        }
+
+        .player-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-weight: 600;
+        }
+
+        .draft-info {
+            background: rgba(40, 167, 69, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 4px solid var(--success-green);
+        }
+
+        .draft-info h4 {
+            color: var(--success-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .draft-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+            <div class="header">
+            <h1><i class="fas fa-baseball-ball"></i> Georgia Bulldogs MLB Draft Tracker</h1>
+            <p>Real-time tracking of Georgia Bulldogs in the 2025 MLB Draft</p>
+            <p style="color: yellow; font-size: 2rem; margin-top: 10px; background: red; padding: 10px;">*** UPDATED ON JULY 2025 - IF YOU SEE THIS RED BOX, UPDATES ARE WORKING ***</p>
+        </div>
+
+    <div class="container">
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number" id="totalPlayers">0</div>
+                <div class="stat-label">Total Players</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="draftedPlayers">0</div>
+                <div class="stat-label">Drafted Players</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="availablePlayers">0</div>
+                <div class="stat-label">Available Players</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalPicks">0</div>
+                <div class="stat-label">Total Draft Picks</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="filter-group">
+                <label for="positionFilter">Position:</label>
+                <select id="positionFilter">
+                    <option value="">All Positions</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter">
+                    <option value="">All Players</option>
+                    <option value="drafted">Drafted</option>
+                    <option value="available">Available</option>
+                </select>
+            </div>
+            <div class="filter-group search-box">
+                <label for="searchBox">Search:</label>
+                <input type="text" id="searchBox" placeholder="Search by name...">
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="connectionStatus">Connecting...</span>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <div id="loadingMessage" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading player data...
+        </div>
+
+        <div id="playersContainer" class="players-grid" style="display: none;"></div>
+        
+        <div id="noResults" class="no-results" style="display: none;">
+            <i class="fas fa-search"></i>
+            <p>No players found matching your criteria</p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allPlayers = [];
+        let filteredPlayers = [];
+        let socket = null;
+        let positions = new Set();
+
+        // Initialize the application
+        function init() {
+            connectSocket();
+            setupEventListeners();
+            loadInitialData();
+        }
+
+        // Connect to Socket.IO
+        function connectSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                updateConnectionStatus('Connected', 'success');
+            });
+
+            socket.on('disconnect', () => {
+                updateConnectionStatus('Disconnected', 'error');
+            });
+
+            socket.on('dataUpdate', (data) => {
+                handleDataUpdate(data);
+            });
+        }
+
+        // Update connection status
+        function updateConnectionStatus(message, type) {
+            const statusElement = document.getElementById('connectionStatus');
+            const dotElement = document.querySelector('.status-dot');
+            
+            statusElement.textContent = message;
+            
+            if (type === 'success') {
+                dotElement.style.background = 'var(--success-green)';
+            } else if (type === 'error') {
+                dotElement.style.background = '#dc3545';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('positionFilter').addEventListener('change', filterPlayers);
+            document.getElementById('statusFilter').addEventListener('change', filterPlayers);
+            document.getElementById('searchBox').addEventListener('input', filterPlayers);
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            try {
+                const response = await fetch('/api/players');
+                const data = await response.json();
+                handleDataUpdate(data);
+            } catch (error) {
+                showError('Failed to load initial data: ' + error.message);
+            }
+        }
+
+        // Handle data updates
+        function handleDataUpdate(data) {
+            allPlayers = data.players || [];
+            updateStats();
+            populatePositionFilter();
+            filterPlayers();
+            hideLoading();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const totalPlayers = allPlayers.length;
+            const draftedPlayers = allPlayers.filter(p => p.isDrafted).length;
+            const availablePlayers = totalPlayers - draftedPlayers;
+            const totalPicks = data.draftPicks ? data.draftPicks.length : 0;
+
+            document.getElementById('totalPlayers').textContent = totalPlayers;
+            document.getElementById('draftedPlayers').textContent = draftedPlayers;
+            document.getElementById('availablePlayers').textContent = availablePlayers;
+            document.getElementById('totalPicks').textContent = totalPicks;
+        }
+
+        // Populate position filter
+        function populatePositionFilter() {
+            positions.clear();
+            allPlayers.forEach(player => {
+                if (player.Position) {
+                    positions.add(player.Position);
+                }
+            });
+
+            const positionFilter = document.getElementById('positionFilter');
+            const currentValue = positionFilter.value;
+            
+            // Clear existing options except "All Positions"
+            positionFilter.innerHTML = '<option value="">All Positions</option>';
+            
+            // Add position options
+            Array.from(positions).sort().forEach(position => {
+                const option = document.createElement('option');
+                option.value = position;
+                option.textContent = position;
+                positionFilter.appendChild(option);
+            });
+            
+            positionFilter.value = currentValue;
+        }
+
+        // Filter players
+        function filterPlayers() {
+            const positionFilter = document.getElementById('positionFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+
+            filteredPlayers = allPlayers.filter(player => {
+                // Position filter
+                if (positionFilter && player.Position !== positionFilter) {
+                    return false;
+                }
+
+                // Status filter
+                if (statusFilter === 'drafted' && !player.isDrafted) {
+                    return false;
+                }
+                if (statusFilter === 'available' && player.isDrafted) {
+                    return false;
+                }
+
+                // Search filter
+                if (searchTerm) {
+                    const name = (player.Name || '').toLowerCase();
+                    if (!name.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            renderPlayers();
+        }
+
+        // Render players
+        function renderPlayers() {
+            const container = document.getElementById('playersContainer');
+            const noResults = document.getElementById('noResults');
+
+            if (filteredPlayers.length === 0) {
+                container.style.display = 'none';
+                noResults.style.display = 'block';
+                return;
+            }
+
+            container.style.display = 'grid';
+            noResults.style.display = 'none';
+
+            container.innerHTML = filteredPlayers.map(player => createPlayerCard(player)).join('');
+        }
+
+        // Create player card HTML
+        function createPlayerCard(player) {
+            const cardClass = player.isDrafted ? 'player-card drafted' : 'player-card';
+            
+            let draftInfoHtml = '';
+            if (player.isDrafted && player.draftInfo) {
+                draftInfoHtml = `
+                    <div class="draft-info">
+                        <h4><i class="fas fa-trophy"></i> Draft Information</h4>
+                        <div class="draft-details">
+                            <div class="info-item">
+                                <span class="info-label">Pick:</span>
+                                <span class="info-value">${player.draftInfo.pickNumber}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Team:</span>
+                                <span class="info-value">${player.draftInfo.team}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="${cardClass}">
+                    <div class="player-name">${player.Name || 'Unknown Player'}</div>
+                    <div class="player-info">
+                        <div class="info-item">
+                            <span class="info-label">Position:</span>
+                            <span class="info-value">${player.Position || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">School:</span>
+                            <span class="info-value">${player.School || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Height:</span>
+                            <span class="info-value">${player.Height || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Weight:</span>
+                            <span class="info-value">${player.Weight || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Bats:</span>
+                            <span class="info-value">${player.Bats || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Throws:</span>
+                            <span class="info-value">${player.Throws || 'N/A'}</span>
+                        </div>
+                    </div>
+                    ${draftInfoHtml}
+                </div>
+            `;
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            hideLoading();
+        }
+
+        // Hide loading message
+        function hideLoading() {
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html> 
+  <!-- Force redeploy for black background -->

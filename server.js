@@ -82,6 +82,13 @@ async function fetchPlayersFromSheet() {
       header.forEach((key, index) => {
         player[key] = row[index] || '';
       });
+      
+      // Add missing fields with default values for compatibility
+      if (!player.Height) player.Height = 'N/A';
+      if (!player.Weight) player.Weight = 'N/A';
+      if (!player.Bats) player.Bats = 'N/A';
+      if (!player.Throws) player.Throws = 'N/A';
+      
       return player;
     });
   } catch (error) {

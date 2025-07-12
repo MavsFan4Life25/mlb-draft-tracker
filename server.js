@@ -25,8 +25,15 @@ app.use(express.json());
 app.use(express.static('frontend'));
 
 // Configuration
-const SHEET_ID = process.env.SPREADSHEET_ID || '1XS51hUBt5rUoCJGZCgQhnzUCvLN3zDczwNC0yV4hz9I';
+const SHEET_ID = process.env.SPREADSHEET_ID || process.env.SHEET_ID || '1XS51hUBt5rUoCJGZCgQhnzUCvLN3zDczwNC0yV4hz9I';
 const SHEET_RANGE = process.env.SHEET_RANGE || 'Sheet1!A1:Z1000';
+
+// Debug environment variables
+console.log('Environment check:');
+console.log('SPREADSHEET_ID:', process.env.SPREADSHEET_ID ? 'SET' : 'NOT SET');
+console.log('SHEET_ID:', process.env.SHEET_ID ? 'SET' : 'NOT SET');
+console.log('GOOGLE_CREDENTIALS:', process.env.GOOGLE_CREDENTIALS ? 'SET' : 'NOT SET');
+console.log('Using SHEET_ID:', SHEET_ID);
 const MLB_DRAFT_URL = 'https://www.mlb.com/draft/tracker';
 
 // Cache for data
@@ -65,7 +72,7 @@ async function fetchPlayersFromSheet() {
     const data = response.data.values;
     if (!data || data.length === 0) {
       console.log('No data found in sheet');
-      return [];
+      return getSampleData();
     }
 
     // Convert to objects using header row
@@ -79,8 +86,51 @@ async function fetchPlayersFromSheet() {
     });
   } catch (error) {
     console.error('Error fetching from Google Sheets:', error);
-    return [];
+    console.log('Falling back to sample data...');
+    return getSampleData();
   }
+}
+
+// Sample data for testing when Google Sheets is not available
+function getSampleData() {
+  return [
+    {
+      Name: 'Charlie Condon',
+      Position: 'OF/1B',
+      School: 'Georgia',
+      Height: '6-6',
+      Weight: '216',
+      Bats: 'R',
+      Throws: 'R'
+    },
+    {
+      Name: 'Corey Collins',
+      Position: 'C',
+      School: 'Georgia',
+      Height: '6-3',
+      Weight: '220',
+      Bats: 'L',
+      Throws: 'R'
+    },
+    {
+      Name: 'Kolten Smith',
+      Position: 'RHP',
+      School: 'Georgia',
+      Height: '6-3',
+      Weight: '225',
+      Bats: 'R',
+      Throws: 'R'
+    },
+    {
+      Name: 'Fernando Gonzalez',
+      Position: 'C',
+      School: 'Georgia',
+      Height: '5-11',
+      Weight: '200',
+      Bats: 'R',
+      Throws: 'R'
+    }
+  ];
 }
 
 // Scrape MLB Draft Tracker

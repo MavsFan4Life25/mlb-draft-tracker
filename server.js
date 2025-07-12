@@ -287,7 +287,14 @@ cron.schedule('*/30 * * * * *', () => {
 });
 
 // Initial data load
-updateData();
+console.log('Starting initial data load...');
+updateData().then(() => {
+  console.log('Initial data load completed');
+  console.log('Players loaded:', players.length);
+  console.log('Draft picks loaded:', draftPicks.length);
+}).catch(error => {
+  console.error('Initial data load failed:', error);
+});
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -343,9 +350,43 @@ app.get('/test', (req, res) => {
         <h1>🎉 SERVER ROUTE SUCCESS! 🎉</h1>
         <p>If you can see this red page, the server is working!</p>
         <p>This means the issue is with static file serving.</p>
+        <p>Players loaded: ${players.length}</p>
+        <p>Draft picks loaded: ${draftPicks.length}</p>
     </body>
     </html>
   `);
+});
+
+// Simple test API that returns sample data directly
+app.get('/api/test', (req, res) => {
+  const sampleData = [
+    {
+      Name: 'Charlie Condon',
+      Position: 'OF/1B',
+      School: 'Georgia',
+      Height: '6-6',
+      Weight: '216',
+      Bats: 'R',
+      Throws: 'R',
+      isDrafted: false
+    },
+    {
+      Name: 'Corey Collins',
+      Position: 'C',
+      School: 'Georgia',
+      Height: '6-3',
+      Weight: '220',
+      Bats: 'L',
+      Throws: 'R',
+      isDrafted: false
+    }
+  ];
+  
+  res.json({
+    players: sampleData,
+    draftPicks: [],
+    lastUpdate: new Date().toISOString()
+  });
 });
 
 // Serve the main page

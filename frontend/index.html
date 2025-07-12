@@ -394,11 +394,23 @@
         // Load initial data
         async function loadInitialData() {
             try {
+                console.log('Loading data from /api/players...');
                 const response = await fetch('/api/players');
                 const data = await response.json();
+                console.log('Data loaded:', data);
                 handleDataUpdate(data);
             } catch (error) {
-                showError('Failed to load initial data: ' + error.message);
+                console.error('Failed to load from /api/players:', error);
+                console.log('Trying fallback /api/test...');
+                try {
+                    const testResponse = await fetch('/api/test');
+                    const testData = await testResponse.json();
+                    console.log('Fallback data loaded:', testData);
+                    handleDataUpdate(testData);
+                } catch (fallbackError) {
+                    console.error('Fallback also failed:', fallbackError);
+                    showError('Failed to load data. Please check server logs.');
+                }
             }
         }
 
@@ -416,12 +428,11 @@
             const totalPlayers = allPlayers.length;
             const draftedPlayers = allPlayers.filter(p => p.isDrafted).length;
             const availablePlayers = totalPlayers - draftedPlayers;
-            const totalPicks = data.draftPicks ? data.draftPicks.length : 0;
 
             document.getElementById('totalPlayers').textContent = totalPlayers;
             document.getElementById('draftedPlayers').textContent = draftedPlayers;
             document.getElementById('availablePlayers').textContent = availablePlayers;
-            document.getElementById('totalPicks').textContent = totalPicks;
+            document.getElementById('totalPicks').textContent = '0'; // Will be updated when draft picks are available
         }
 
         // Populate position filter

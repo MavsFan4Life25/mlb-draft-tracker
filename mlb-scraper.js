@@ -302,15 +302,10 @@ class MLBDraftScraper {
       const sheets = google.sheets({ version: 'v4', auth });
       const sheetData = this.convertToGoogleSheetsFormat(draftData);
 
-      // Clear existing data and write new data
-      await sheets.spreadsheets.values.clear({
-        spreadsheetId: process.env.SPREADSHEET_ID,
-        range: 'Draft Picks!A1:Z1000',
-      });
-
+      // Write draft data to a separate range (columns F onwards) to preserve player data
       await sheets.spreadsheets.values.update({
         spreadsheetId: process.env.SPREADSHEET_ID,
-        range: 'Draft Picks!A1',
+        range: 'Draft Picks!F1',
         valueInputOption: 'RAW',
         resource: {
           values: sheetData,

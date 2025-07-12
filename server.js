@@ -27,14 +27,16 @@ app.use(express.static('frontend'));
 
 // Configuration
 const SHEET_ID = process.env.SPREADSHEET_ID || process.env.SHEET_ID || '1XS51hUBt5rUoCJGZCgQhnzUCvLN3zDczwNC0yV4hz9I';
-const SHEET_RANGE = process.env.SHEET_RANGE || 'Draft Picks!A1:Z1000';
+const SHEET_RANGE = process.env.SHEET_RANGE || 'Players!A1:Z1000';
 
 // Debug environment variables
 console.log('Environment check:');
 console.log('SPREADSHEET_ID:', process.env.SPREADSHEET_ID ? 'SET' : 'NOT SET');
 console.log('SHEET_ID:', process.env.SHEET_ID ? 'SET' : 'NOT SET');
+console.log('SHEET_RANGE:', process.env.SHEET_RANGE ? 'SET' : 'NOT SET');
 console.log('GOOGLE_CREDENTIALS:', process.env.GOOGLE_CREDENTIALS ? 'SET' : 'NOT SET');
 console.log('Using SHEET_ID:', SHEET_ID);
+console.log('Using SHEET_RANGE:', SHEET_RANGE);
 const MLB_DRAFT_URL = 'https://www.mlb.com/draft/tracker';
 
 // Cache for data
@@ -71,6 +73,9 @@ async function fetchPlayersFromSheet() {
     });
 
     const data = response.data.values;
+    console.log('Raw sheet data received:', data ? data.length : 'null', 'rows');
+    console.log('First few rows:', data ? data.slice(0, 3) : 'null');
+    
     if (!data || data.length === 0) {
       console.log('No data found in sheet');
       return getSampleData();
@@ -78,6 +83,10 @@ async function fetchPlayersFromSheet() {
 
     // Convert to objects using header row
     const [header, ...rows] = data;
+    console.log('Header row:', header);
+    console.log('Number of data rows:', rows.length);
+    console.log('First few data rows:', rows.slice(0, 3));
+    
     return rows.map(row => {
       const player = {};
       header.forEach((key, index) => {

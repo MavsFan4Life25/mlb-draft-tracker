@@ -78,15 +78,55 @@ class MLBDraftScraper {
       });
 
       // Method 4: Look for JSON data in script tags
+      let foundInitData = false;
       $('script').each((index, element) => {
         const scriptContent = $(element).html();
-        if (scriptContent && scriptContent.includes('draft') || scriptContent.includes('pick')) {
-          const jsonData = this.extractJSONFromScript(scriptContent);
-          if (jsonData && jsonData.length > 0) {
-            draftData.push(...jsonData);
+        if (scriptContent && scriptContent.includes('window.INIT_DATA')) {
+          foundInitData = true;
+          console.log('Found window.INIT_DATA script');
+          // Extract the string assigned to window.INIT_DATA
+          const match = scriptContent.match(/window\.INIT_DATA\s*=\s*"([^"]+)"/);
+          if (match && match[1]) {
+            let jsonString = match[1];
+            try {
+              // Unescape the string (handle \\ and \")
+              jsonString = jsonString.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+              const data = JSON.parse(jsonString);
+              // Traverse the data to find draft picks
+              if (data && data.draftGroups && Array.isArray(data.draftGroups)) {
+                data.draftGroups.forEach((group) => {
+                  if (group && group.picks && Array.isArray(group.picks)) {
+                    group.picks.forEach((pick) => {
+                      if (pick && pick.player && pick.player.fullName) {
+                        const pickData = {
+                          pickNumber: pick.pickNumber || pick.overallPickNumber || 'Unknown',
+                          playerName: pick.player.fullName,
+                          position: pick.player.primaryPosition || pick.player.position || 'Unknown',
+                          school: pick.player.school || pick.player.college || pick.player.highSchool || 'Unknown',
+                          team: pick.team && pick.team.name ? pick.team.name : 'Unknown',
+                          timestamp: new Date().toISOString()
+                        };
+                        draftData.push(pickData);
+                        console.log('Added pick from INIT_DATA:', pickData);
+                      }
+                    });
+                  }
+                });
+                console.log(`Extracted ${draftData.length} picks from INIT_DATA`);
+              } else {
+                console.log('INIT_DATA does not contain draftGroups or picks');
+              }
+            } catch (e) {
+              console.error('Failed to parse window.INIT_DATA JSON:', e);
+            }
+          } else {
+            console.log('Could not extract JSON string from window.INIT_DATA');
           }
         }
       });
+      if (!foundInitData) {
+        console.log('No window.INIT_DATA script found on the page');
+      }
 
       // Method 5: Look for specific MLB draft tracker elements
       $('[class*="draft-pick"], [class*="pick-card"], [class*="draft-card"]').each((index, element) => {

@@ -491,6 +491,63 @@ app.get('/api/debug-sheets', async (req, res) => {
   }
 });
 
+// Debug endpoint to test MLB API directly
+app.get('/api/debug-mlb-api', async (req, res) => {
+  try {
+    console.log('Debug MLB API test triggered...');
+    
+    const axios = require('axios');
+    const response = await axios.get('https://statsapi.mlb.com/api/v1/draft/2025', {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    const data = response.data;
+    let totalPicks = 0;
+    let draftedPicks = [];
+    
+    if (data.drafts && Array.isArray(data.drafts)) {
+      data.drafts.forEach((draft, index) => {
+        if (draft.rounds && Array.isArray(draft.rounds)) {
+          draft.rounds.forEach((round, roundIndex) => {
+            if (round.picks && Array.isArray(round.picks)) {
+              const roundDraftedPicks = round.picks.filter(pick => pick.isDrafted);
+              totalPicks += roundDraftedPicks.length;
+              
+              roundDraftedPicks.forEach(pick => {
+                draftedPicks.push({
+                  pickNumber: pick.pickNumber,
+                  playerName: pick.person?.fullName,
+                  team: pick.team?.name,
+                  school: pick.school?.name,
+                  position: pick.person?.primaryPosition?.name
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      totalPicks: totalPicks,
+      draftedPicks: draftedPicks.slice(0, 10), // Show first 10 picks
+      responseKeys: Object.keys(data),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Debug MLB API test failed:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Debug endpoint to test player matching
 app.get('/api/debug-matching', async (req, res) => {
   try {

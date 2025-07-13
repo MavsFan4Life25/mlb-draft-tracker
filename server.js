@@ -179,6 +179,10 @@ async function scrapeMLBDraftPicks() {
 
 // Update player draft status
 function updatePlayerDraftStatus(players, picks) {
+  console.log(`Matching ${picks.length} picks to ${players.length} players`);
+  console.log('First few picks:', picks.slice(0, 3).map(p => ({ playerName: p.playerName, pickNumber: p.pickNumber })));
+  console.log('First few players:', players.slice(0, 3).map(p => ({ Name: p.Name, School: p.School })));
+  
   return players.map(player => {
     const matchingPick = picks.find(pick => {
       const pickName = pick.playerName.toLowerCase().trim();
@@ -221,6 +225,11 @@ function updatePlayerDraftStatus(players, picks) {
             console.log(`School + Last name match: ${playerName} (${playerSchool}) = ${pickName} (${pickSchool})`);
             return true;
           }
+        }
+        
+        // Debug school matching
+        if (pickName.includes('eli') || pickName.includes('willits')) {
+          console.log(`Debug school match attempt: Player "${playerName}" (${playerSchool}) vs Pick "${pickName}" (${pickSchool})`);
         }
       }
       
@@ -419,6 +428,41 @@ app.get('/api/test-scraper', async (req, res) => {
     });
   } catch (error) {
     console.error('Manual scraper test failed:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Debug endpoint to test player matching
+app.get('/api/debug-matching', async (req, res) => {
+  try {
+    console.log('Debug matching test triggered...');
+    
+    // Fetch current data
+    const [sheetPlayers, mlbPicks] = await Promise.all([
+      fetchPlayersFromSheet(),
+      scrapeMLBDraftPicks()
+    ]);
+    
+    // Test matching logic
+    const updatedPlayers = updatePlayerDraftStatus(sheetPlayers, mlbPicks);
+    const draftedPlayers = updatedPlayers.filter(p => p.isDrafted);
+    
+    res.json({
+      success: true,
+      totalPlayers: sheetPlayers.length,
+      totalPicks: mlbPicks.length,
+      draftedPlayers: draftedPlayers.length,
+      samplePicks: mlbPicks.slice(0, 5),
+      samplePlayers: sheetPlayers.slice(0, 5),
+      draftedPlayerNames: draftedPlayers.map(p => p.Name),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Debug matching test failed:', error);
     res.json({
       success: false,
       error: error.message,

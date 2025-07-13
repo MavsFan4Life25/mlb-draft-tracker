@@ -1,0 +1,85 @@
+{
+  "canonicalUrl": "https://www.mlb.com/draft/tracker",
+  "config": {
+    "mode_state": "live",
+    "data_year": [
+      "2025"
+    ],
+    "pageTitle": "MLB Draft Tracker",
+    "appJson": {
+      "fetchDelay": 500,
+      "pollingCadence": 3000,
+      "useCacheBuster": false,
+      "backgroundColor": "#040c2c"
+    },
+    "shareImage": {
+      "file": {
+        "url": "https://images.ctfassets.net/iiozhi00a8lc/2FKpy1TnDTBkgtSzUzm6iD/2ffdf81c05d78cf0f32d500b5f50ddcf/1031x538_Draft.jpg",
+        "__typename": "Asset"
+      },
+      "__typename": "Image"
+    },
+    "__typename": "AppConfig",
+    "header": "2025 Draft Tracker",
+    "watch_Blurb": "Watch on",
+    "watch_URLtext": "MLB",
+    "watch_URL": "/tv/shows/mlbtv-featured-svod-video-list/mlbn-live-stream\n",
+    "draft_skins": "https://images.ctfassets.net/iiozhi00a8lc/2d8KM7zXA2aU7moRGAmOzO/8cc14308fe219ad763896f2aae95e9f5/1680x900-Draft.jpg",
+    "draft_year": false
+  },
+  "filters": {
+    "year": [
+      "2025"
+    ],
+    "primaryFilter": "all",
+    "secondaryFilterType": null,
+    "secondaryFilter": null,
+    "draftState": "live"
+  },
+  "locale": "en",
+  "navObj": [
+    {
+      "title": "Top 250 Prospects",
+      "titleShort": "Top 250 Prospects",
+      "isActive": false,
+      "url": "https://www.mlb.com/prospects/2025/draft/",
+      "mobileUrl": "https://www.mlb.com/prospects/2025/draft/"
+    },
+    {
+      "title": "Draft Order",
+      "titleShort": "Draft Order",
+      "isActive": false,
+      "url": "https://www.mlb.com/draft/2025/order",
+      "mobileUrl": "https://www.mlb.com/draft/2025/order"
+    },
+    {
+      "title": "Draft Central",
+      "titleShort": "Draft Central",
+      "isActive": false,
+      "url": "/draft/2025/",
+      "mobileUrl": "/draft/2025/"
+    },
+    {
+      "title": "Draft Video",
+      "titleShort": "Draft Video",
+      "isActive": false,
+      "url": "/video/topic/mlb-draft",
+      "mobileUrl": "/video/topic/mlb-draft"
+    },
+    {
+      "title": "Draft History",
+      "titleShort": "Draft History",
+      "isActive": true,
+      "url": "/draft/tracker",
+      "mobileUrl": "/draft/tracker"
+    }
+  ],
+  "statsapi": {
+    "server": "http://statsapi.mlb.com",
+    "client": "https://statsapi.mlb.com",
+    "siteCode": "mlb"
+  },
+  "yearConfig": [
+    "2025"
+  ]
+}

@@ -157,88 +157,67 @@ class MLBDraftScraper {
         console.log('Spotrac response status:', spotracResponse.status);
         const $spotrac = cheerio.load(spotracResponse.data);
         
-        // Look for draft picks in Spotrac tables
-        $spotrac('table tr').each((index, row) => {
-          const $row = $spotrac(row);
-          const cells = $row.find('td');
-          
-          if (cells.length >= 3) {
-            const cellTexts = cells.map((i, cell) => $spotrac(cell).text().trim()).get();
-            console.log('Spotrac row:', cellTexts);
+        // Look for draft picks in Spotrac tables - be more specific about table selection
+        $spotrac('table').each((tableIndex, table) => {
+          const $table = $spotrac(table);
+          $table.find('tr').each((rowIndex, row) => {
+            const $row = $spotrac(row);
+            const cells = $row.find('td');
             
-            // Look for pick number in first column
-            const pickNumberMatch = cellTexts[0].match(/^(\d+)$/);
-            if (pickNumberMatch && cellTexts[1]) {
-              // Extract player name from the second column
+            if (cells.length >= 4) {
+              const cellTexts = cells.map((i, cell) => {
+                const text = $spotrac(cell).text().trim();
+                // Clean up the text - remove extra whitespace and newlines
+                return text.replace(/\s+/g, ' ').trim();
+              }).get();
+              
+              console.log('Spotrac row:', cellTexts);
+              
+              // Validate that we have meaningful data
+              if (cellTexts.length < 4) return;
+              
+              // Look for pick number in first column - must be a valid number
+              const pickNumberMatch = cellTexts[0].match(/^(\d+)$/);
+              if (!pickNumberMatch) return;
+              
+              const pickNumber = pickNumberMatch[1];
+              
+              // Extract player name from the second column - must be a valid name
               let playerName = cellTexts[1];
               
-              // Clean up the player name - remove extra whitespace and newlines
-              playerName = playerName.replace(/\s+/g, ' ').trim();
+              // Validate player name - must contain at least 2 words with proper capitalization
+              const nameWords = playerName.split(' ').filter(word => word.length > 0);
+              if (nameWords.length < 2) return;
+              
+              // Check if first letter of each word is capitalized
+              const isValidName = nameWords.every(word => /^[A-Z]/.test(word));
+              if (!isValidName) return;
               
               // Skip if player name is empty or just whitespace
-              if (!playerName || playerName === '') {
-                return;
-              }
+              if (!playerName || playerName === '') return;
+              
+              // Extract position and school
+              const position = cellTexts[2] || 'Unknown';
+              const school = cellTexts[3] || 'Unknown';
               
               const pickData = {
-                pickNumber: pickNumberMatch[1],
+                pickNumber: pickNumber,
                 playerName: playerName,
-                position: cellTexts[2] || 'Unknown',
-                school: cellTexts[3] || 'Unknown',
-                team: cellTexts[4] || 'TBD',
+                position: position,
+                school: school,
+                team: 'TBD',
                 timestamp: new Date().toISOString()
               };
+              
               draftData.push(pickData);
               console.log('Added Spotrac pick:', JSON.stringify(pickData));
             }
-          }
+          });
         });
       } catch (spotracError) {
         console.log('Spotrac scraping failed:', spotracError.message);
       }
       
-      // Method 10: Look for any text containing pick numbers
-      $('*').each((index, element) => {
-        const $el = $(element);
-        const text = $el.text().trim();
-        
-        // Look for patterns like "1.", "2.", "3." followed by names
-        const pickMatch = text.match(/(\d+)\.\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
-        if (pickMatch) {
-          console.log('Found pick pattern:', pickMatch[0]);
-          const pickData = {
-            pickNumber: pickMatch[1],
-            playerName: pickMatch[2],
-            position: 'Unknown',
-            school: 'Unknown',
-            team: 'TBD',
-            timestamp: new Date().toISOString()
-          };
-          draftData.push(pickData);
-        }
-      });
-
-      // Method 7: Look for any text containing pick numbers
-      $('*').each((index, element) => {
-        const $el = $(element);
-        const text = $el.text().trim();
-        
-        // Look for patterns like "1.", "2.", "3." followed by names
-        const pickMatch = text.match(/(\d+)\.\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
-        if (pickMatch) {
-          console.log('Found pick pattern:', pickMatch[0]);
-          const pickData = {
-            pickNumber: pickMatch[1],
-            playerName: pickMatch[2],
-            position: 'Unknown',
-            school: 'Unknown',
-            team: 'TBD',
-            timestamp: new Date().toISOString()
-          };
-          draftData.push(pickData);
-        }
-      });
-
       // Remove duplicates and sort
       const uniqueData = this.removeDuplicates(draftData);
       const sortedData = uniqueData.sort((a, b) => {

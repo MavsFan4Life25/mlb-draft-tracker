@@ -6,6 +6,7 @@ require('dotenv').config();
 class MLBDraftScraper {
   constructor() {
     this.baseUrl = 'https://www.mlb.com/draft/tracker';
+    this.spotracUrl = 'https://www.spotrac.com/mlb/draft';
     this.headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -145,7 +146,47 @@ class MLBDraftScraper {
         console.log('Found draft-related text:', draftTextMatch.length, 'occurrences');
       }
       
-      // Method 7: Look for any text containing pick numbers
+      // Method 9: Try Spotrac as alternative source
+      console.log('Trying Spotrac as alternative source...');
+      try {
+        const spotracResponse = await axios.get(this.spotracUrl, {
+          headers: this.headers,
+          timeout: 10000
+        });
+        
+        console.log('Spotrac response status:', spotracResponse.status);
+        const $spotrac = cheerio.load(spotracResponse.data);
+        
+        // Look for draft picks in Spotrac tables
+        $spotrac('table tr').each((index, row) => {
+          const $row = $spotrac(row);
+          const cells = $row.find('td');
+          
+          if (cells.length >= 3) {
+            const cellTexts = cells.map((i, cell) => $spotrac(cell).text().trim()).get();
+            console.log('Spotrac row:', cellTexts);
+            
+            // Look for pick number in first column
+            const pickNumberMatch = cellTexts[0].match(/^(\d+)$/);
+            if (pickNumberMatch && cellTexts[1]) {
+              const pickData = {
+                pickNumber: pickNumberMatch[1],
+                playerName: cellTexts[1],
+                position: cellTexts[2] || 'Unknown',
+                school: cellTexts[3] || 'Unknown',
+                team: cellTexts[4] || 'TBD',
+                timestamp: new Date().toISOString()
+              };
+              draftData.push(pickData);
+              console.log('Added Spotrac pick:', pickData);
+            }
+          }
+        });
+      } catch (spotracError) {
+        console.log('Spotrac scraping failed:', spotracError.message);
+      }
+      
+      // Method 10: Look for any text containing pick numbers
       $('*').each((index, element) => {
         const $el = $(element);
         const text = $el.text().trim();

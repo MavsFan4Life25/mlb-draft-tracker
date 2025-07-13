@@ -177,30 +177,46 @@ async function scrapeMLBDraftPicks() {
 function updatePlayerDraftStatus(players, picks) {
   return players.map(player => {
     const matchingPick = picks.find(pick => {
-      const pickName = pick.playerName.toLowerCase();
-      const playerName = player.Name ? player.Name.toLowerCase() : '';
-      const playerSchool = player.School ? player.School.toLowerCase() : '';
+      const pickName = pick.playerName.toLowerCase().trim();
+      const playerName = player.Name ? player.Name.toLowerCase().trim() : '';
+      const playerSchool = player.School ? player.School.toLowerCase().trim() : '';
       
-      // Try exact name match first
-      if (pickName === playerName) return true;
+      // Only match if we have valid names
+      if (!pickName || !playerName) return false;
       
-      // Try partial name matches
-      if (pickName.includes(playerName) || playerName.includes(pickName)) return true;
+      // Try exact name match first (most strict)
+      if (pickName === playerName) {
+        console.log(`Exact match: ${playerName} = ${pickName}`);
+        return true;
+      }
       
-      // Try matching last names
-      const pickLastName = pickName.split(' ').pop();
-      const playerLastName = playerName.split(' ').pop();
-      if (pickLastName && playerLastName && pickLastName === playerLastName) return true;
+      // Try exact first and last name match
+      const pickNameParts = pickName.split(' ').filter(part => part.length > 0);
+      const playerNameParts = playerName.split(' ').filter(part => part.length > 0);
       
-      // If we have school info from MLB, try matching by school too
+      if (pickNameParts.length >= 2 && playerNameParts.length >= 2) {
+        const pickFirst = pickNameParts[0];
+        const pickLast = pickNameParts[pickNameParts.length - 1];
+        const playerFirst = playerNameParts[0];
+        const playerLast = playerNameParts[playerNameParts.length - 1];
+        
+        if (pickFirst === playerFirst && pickLast === playerLast) {
+          console.log(`First/Last match: ${playerName} = ${pickName}`);
+          return true;
+        }
+      }
+      
+      // Only try school matching if we have school info from the pick
       if (pick.school && playerSchool) {
-        const pickSchool = pick.school.toLowerCase();
-        if (pickSchool === playerSchool || pickSchool.includes(playerSchool) || playerSchool.includes(pickSchool)) {
-          // If schools match, be more lenient with name matching
-          const nameSimilarity = pickName.split(' ').some(namePart => 
-            playerName.includes(namePart) || namePart.includes(playerName.split(' ')[0])
-          );
-          if (nameSimilarity) return true;
+        const pickSchool = pick.school.toLowerCase().trim();
+        if (pickSchool === playerSchool) {
+          // If schools match exactly, try last name match
+          const pickLastName = pickName.split(' ').pop();
+          const playerLastName = playerName.split(' ').pop();
+          if (pickLastName && playerLastName && pickLastName === playerLastName) {
+            console.log(`School + Last name match: ${playerName} (${playerSchool}) = ${pickName} (${pickSchool})`);
+            return true;
+          }
         }
       }
       

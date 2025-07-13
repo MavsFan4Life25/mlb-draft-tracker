@@ -376,11 +376,25 @@ app.get('/api/test-scraper', async (req, res) => {
   try {
     console.log('Manual scraper test triggered...');
     const scraper = new MLBDraftScraper();
+    
+    // Capture console.log output
+    const originalLog = console.log;
+    const logs = [];
+    console.log = (...args) => {
+      logs.push(args.join(' '));
+      originalLog(...args);
+    };
+    
     const picks = await scraper.scrapeDraftData();
+    
+    // Restore console.log
+    console.log = originalLog;
+    
     res.json({
       success: true,
       picksFound: picks.length,
       picks: picks,
+      logs: logs,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

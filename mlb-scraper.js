@@ -7,6 +7,7 @@ class MLBDraftScraper {
   constructor() {
     this.baseUrl = 'https://www.mlb.com/draft/tracker';
     this.spotracUrl = 'https://www.spotrac.com/mlb/draft';
+    this.statsApiUrl = 'https://statsapi.mlb.com/api/v1/draft/2025';
     this.headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -17,7 +18,47 @@ class MLBDraftScraper {
     };
   }
 
+  async fetchDraftPicksFromStatsAPI() {
+    try {
+      console.log('Fetching draft picks from StatsAPI...');
+      const response = await axios.get(this.statsApiUrl, { timeout: 10000 });
+      if (response.status !== 200) throw new Error('Non-200 response from StatsAPI');
+      const data = response.data;
+      if (!data || !data.drafts || !Array.isArray(data.drafts) || data.drafts.length === 0) {
+        throw new Error('No draft data in StatsAPI response');
+      }
+      const picks = [];
+      for (const draft of data.drafts) {
+        if (draft.picks && Array.isArray(draft.picks)) {
+          for (const pick of draft.picks) {
+            if (pick && pick.pickNumber && pick.player && pick.player.fullName) {
+              picks.push({
+                pickNumber: pick.pickNumber,
+                playerName: pick.player.fullName,
+                position: pick.player.primaryPosition || pick.player.position || 'Unknown',
+                school: pick.player.school || pick.player.college || pick.player.highSchool || 'Unknown',
+                team: pick.team && pick.team.name ? pick.team.name : 'Unknown',
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+        }
+      }
+      console.log(`Fetched ${picks.length} picks from StatsAPI`);
+      return picks;
+    } catch (err) {
+      console.error('Failed to fetch from StatsAPI:', err.message);
+      return null;
+    }
+  }
+
   async scrapeDraftData() {
+    // Try StatsAPI first
+    const apiPicks = await this.fetchDraftPicksFromStatsAPI();
+    if (apiPicks && apiPicks.length > 0) {
+      return apiPicks;
+    }
+
     try {
       console.log('Scraping MLB Draft Tracker...');
       

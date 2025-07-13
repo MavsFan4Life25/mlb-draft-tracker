@@ -27,7 +27,7 @@ app.use(express.static('frontend'));
 
 // Configuration
 const SHEET_ID = process.env.SPREADSHEET_ID || process.env.SHEET_ID || '1XS51hUBt5rUoCJGZCgQhnzUCvLN3zDczwNC0yV4hz9I';
-const SHEET_RANGE = process.env.SHEET_RANGE || 'Players!A1:Z1000';
+const SHEET_RANGE = process.env.SHEET_RANGE || 'A1:Z1000';
 
 // Debug environment variables
 console.log('Environment check:');
@@ -134,6 +134,24 @@ function getSampleData() {
       Position: 'C',
       School: 'Georgia',
       Rank: '78'
+    },
+    {
+      Name: 'Daniel Pierce',
+      Position: 'SS',
+      School: 'Mill Creek HS',
+      Rank: '13'
+    },
+    {
+      Name: 'Eli Willits',
+      Position: 'SS',
+      School: 'Fort Cobb-Broxton HS',
+      Rank: '5'
+    },
+    {
+      Name: 'Ethan Holliday',
+      Position: 'SS',
+      School: 'Stillwater HS',
+      Rank: '1'
     }
   ];
 }
@@ -431,6 +449,43 @@ app.get('/api/test-scraper', async (req, res) => {
     res.json({
       success: false,
       error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Debug endpoint to test Google Sheets connection
+app.get('/api/debug-sheets', async (req, res) => {
+  try {
+    console.log('Debug Google Sheets connection test triggered...');
+    
+    // Test Google Sheets connection
+    const sheetPlayers = await fetchPlayersFromSheet();
+    
+    res.json({
+      success: true,
+      totalPlayers: sheetPlayers.length,
+      samplePlayers: sheetPlayers.slice(0, 5),
+      isUsingSampleData: sheetPlayers.length <= 10, // If <= 10, likely using sample data
+      environmentCheck: {
+        SPREADSHEET_ID: process.env.SPREADSHEET_ID ? 'SET' : 'NOT SET',
+        SHEET_ID: process.env.SHEET_ID ? 'SET' : 'NOT SET',
+        SHEET_RANGE: process.env.SHEET_RANGE ? 'SET' : 'NOT SET',
+        GOOGLE_CREDENTIALS: process.env.GOOGLE_CREDENTIALS ? 'SET' : 'NOT SET'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Debug Google Sheets test failed:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      environmentCheck: {
+        SPREADSHEET_ID: process.env.SPREADSHEET_ID ? 'SET' : 'NOT SET',
+        SHEET_ID: process.env.SHEET_ID ? 'SET' : 'NOT SET',
+        SHEET_RANGE: process.env.SHEET_RANGE ? 'SET' : 'NOT SET',
+        GOOGLE_CREDENTIALS: process.env.GOOGLE_CREDENTIALS ? 'SET' : 'NOT SET'
+      },
       timestamp: new Date().toISOString()
     });
   }

@@ -101,37 +101,8 @@ class MLBDraftScraper {
           }
         }
       });
-
-      // Method 6: Look for draft data in the raw HTML
-      console.log('Searching for draft data patterns in HTML...');
       
-      // Look for patterns like "Pick 1:", "1st Round:", etc.
-      const pickPatterns = [
-        /(\d+)(?:st|nd|rd|th)?\s*(?:Round|Pick)?\s*[:.]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
-        /Pick\s*(\d+)\s*[:.]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
-        /(\d+)\.\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g
-      ];
-      
-      pickPatterns.forEach((pattern, index) => {
-        const matches = response.data.match(pattern);
-        if (matches) {
-          console.log(`Pattern ${index + 1} found matches:`, matches.length);
-          matches.forEach(match => {
-            console.log('Found pick match:', match);
-            const pickData = {
-              pickNumber: match[1] || 'Unknown',
-              playerName: match[2] || 'Unknown',
-              position: 'Unknown',
-              school: 'Unknown',
-              team: 'TBD',
-              timestamp: new Date().toISOString()
-            };
-            draftData.push(pickData);
-          });
-        }
-      });
-      
-      // Method 7: Check if draft has actually started
+      // Method 6: Check if draft has actually started
       console.log('Checking if draft is live...');
       const draftStatusMatch = response.data.match(/draft.*live|live.*draft|draft.*started|started.*draft/gi);
       if (draftStatusMatch) {
@@ -140,13 +111,13 @@ class MLBDraftScraper {
         console.log('No draft status indicators found - draft may not have started yet');
       }
       
-      // Method 8: Look for any text containing "pick" or "draft"
+      // Method 7: Look for any text containing "pick" or "draft"
       const draftTextMatch = response.data.match(/pick|draft/gi);
       if (draftTextMatch) {
         console.log('Found draft-related text:', draftTextMatch.length, 'occurrences');
       }
       
-      // Method 9: Try Spotrac as alternative source
+      // Method 8: Try Spotrac as alternative source
       console.log('Trying Spotrac as alternative source...');
       try {
         const spotracResponse = await axios.get(this.spotracUrl, {

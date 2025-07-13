@@ -101,7 +101,40 @@ class MLBDraftScraper {
         }
       });
 
-      // Method 6: Look for any text containing pick numbers
+      // Method 6: Extract data from INIT_DATA JavaScript variable
+      const initDataMatch = response.data.match(/window\.INIT_DATA\s*=\s*"([^"]+)"/);
+      if (initDataMatch) {
+        console.log('Found INIT_DATA, attempting to parse...');
+        try {
+          const decodedData = JSON.parse(initDataMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+          console.log('INIT_DATA parsed successfully:', Object.keys(decodedData));
+          
+          // Look for draft picks in the parsed data
+          if (decodedData.draftPicks || decodedData.picks || decodedData.selections) {
+            const picks = decodedData.draftPicks || decodedData.picks || decodedData.selections;
+            console.log('Found picks in INIT_DATA:', picks.length);
+            
+            picks.forEach((pick, index) => {
+              if (pick && (pick.playerName || pick.name || pick.player)) {
+                const pickData = {
+                  pickNumber: pick.pickNumber || pick.number || (index + 1).toString(),
+                  playerName: pick.playerName || pick.name || pick.player || 'Unknown',
+                  position: pick.position || pick.pos || 'Unknown',
+                  school: pick.school || pick.college || 'Unknown',
+                  team: pick.team || pick.franchise || 'TBD',
+                  timestamp: new Date().toISOString()
+                };
+                draftData.push(pickData);
+                console.log('Added pick:', pickData);
+              }
+            });
+          }
+        } catch (parseError) {
+          console.log('Failed to parse INIT_DATA:', parseError.message);
+        }
+      }
+
+      // Method 7: Look for any text containing pick numbers
       $('*').each((index, element) => {
         const $el = $(element);
         const text = $el.text().trim();

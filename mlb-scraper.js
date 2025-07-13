@@ -169,16 +169,27 @@ class MLBDraftScraper {
             // Look for pick number in first column
             const pickNumberMatch = cellTexts[0].match(/^(\d+)$/);
             if (pickNumberMatch && cellTexts[1]) {
+              // Extract player name from the second column
+              let playerName = cellTexts[1];
+              
+              // Clean up the player name - remove extra whitespace and newlines
+              playerName = playerName.replace(/\s+/g, ' ').trim();
+              
+              // Skip if player name is empty or just whitespace
+              if (!playerName || playerName === '') {
+                return;
+              }
+              
               const pickData = {
                 pickNumber: pickNumberMatch[1],
-                playerName: cellTexts[1],
+                playerName: playerName,
                 position: cellTexts[2] || 'Unknown',
                 school: cellTexts[3] || 'Unknown',
                 team: cellTexts[4] || 'TBD',
                 timestamp: new Date().toISOString()
               };
               draftData.push(pickData);
-              console.log('Added Spotrac pick:', pickData);
+              console.log('Added Spotrac pick:', JSON.stringify(pickData));
             }
           }
         });
@@ -235,6 +246,20 @@ class MLBDraftScraper {
         const bNum = parseInt(b.pickNumber) || 0;
         return aNum - bNum;
       });
+
+      console.log(`Found ${draftData.length} raw draft picks`);
+      console.log(`After removing duplicates: ${uniqueData.length} picks`);
+      console.log(`Final sorted data: ${sortedData.length} picks`);
+      
+      // Debug: Log first few picks
+      if (sortedData.length > 0) {
+        console.log('First 5 picks:', sortedData.slice(0, 5).map(pick => ({
+          pickNumber: pick.pickNumber,
+          playerName: pick.playerName,
+          position: pick.position,
+          school: pick.school
+        })));
+      }
 
       console.log(`Found ${sortedData.length} draft picks`);
       return sortedData;

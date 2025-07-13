@@ -145,6 +145,9 @@ async function scrapeMLBDraftPicks() {
     const scraper = new MLBDraftScraper();
     const picks = await scraper.scrapeDraftData();
     
+    console.log('Raw picks from scraper:', picks.length);
+    console.log('First few picks:', picks.slice(0, 3));
+    
     // Convert to the format expected by the rest of the application
     const formattedPicks = picks.map(pick => ({
       pickNumber: pick.pickNumber,
@@ -155,6 +158,7 @@ async function scrapeMLBDraftPicks() {
     }));
 
     console.log(`Found ${formattedPicks.length} draft picks`);
+    console.log('First few formatted picks:', formattedPicks.slice(0, 3));
     
     // Update Google Sheet if credentials are available
     if (process.env.GOOGLE_CREDENTIALS && process.env.SPREADSHEET_ID) {

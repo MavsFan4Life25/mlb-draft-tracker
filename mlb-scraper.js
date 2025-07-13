@@ -24,22 +24,34 @@ class MLBDraftScraper {
       const response = await axios.get(this.statsApiUrl, { timeout: 10000 });
       if (response.status !== 200) throw new Error('Non-200 response from StatsAPI');
       const data = response.data;
+      
+      console.log('StatsAPI response structure:', Object.keys(data));
+      
       if (!data || !data.drafts || !Array.isArray(data.drafts) || data.drafts.length === 0) {
         throw new Error('No draft data in StatsAPI response');
       }
+      
       const picks = [];
       for (const draft of data.drafts) {
-        if (draft.picks && Array.isArray(draft.picks)) {
-          for (const pick of draft.picks) {
-            if (pick && pick.pickNumber && pick.player && pick.player.fullName) {
-              picks.push({
-                pickNumber: pick.pickNumber,
-                playerName: pick.player.fullName,
-                position: pick.player.primaryPosition || pick.player.position || 'Unknown',
-                school: pick.player.school || pick.player.college || pick.player.highSchool || 'Unknown',
-                team: pick.team && pick.team.name ? pick.team.name : 'Unknown',
-                timestamp: new Date().toISOString()
-              });
+        console.log('Draft structure:', Object.keys(draft));
+        if (draft.rounds && Array.isArray(draft.rounds)) {
+          for (const round of draft.rounds) {
+            console.log('Round structure:', Object.keys(round));
+            if (round.picks && Array.isArray(round.picks)) {
+              for (const pick of round.picks) {
+                console.log('Pick structure:', Object.keys(pick));
+                if (pick && pick.pickNumber && pick.person && pick.person.fullName && pick.isDrafted) {
+                  picks.push({
+                    pickNumber: pick.pickNumber,
+                    playerName: pick.person.fullName,
+                    position: pick.person.primaryPosition ? pick.person.primaryPosition.name : 'Unknown',
+                    school: pick.school ? pick.school.name : 'Unknown',
+                    team: pick.team && pick.team.name ? pick.team.name : 'Unknown',
+                    timestamp: new Date().toISOString()
+                  });
+                  console.log(`Added pick: ${pick.person.fullName} - ${pick.team.name}`);
+                }
+              }
             }
           }
         }
@@ -48,6 +60,7 @@ class MLBDraftScraper {
       return picks;
     } catch (err) {
       console.error('Failed to fetch from StatsAPI:', err.message);
+      console.error('Full error:', err);
       return null;
     }
   }

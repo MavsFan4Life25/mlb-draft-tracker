@@ -106,7 +106,16 @@ class MLBDraftScraper {
       if (initDataMatch) {
         console.log('Found INIT_DATA, attempting to parse...');
         try {
-          const decodedData = JSON.parse(initDataMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+          // Properly decode the escaped JSON string
+          let jsonString = initDataMatch[1];
+          jsonString = jsonString.replace(/\\"/g, '"');  // Replace \" with "
+          jsonString = jsonString.replace(/\\\\/g, '\\'); // Replace \\ with \
+          jsonString = jsonString.replace(/\\n/g, '\n');  // Replace \n with newlines
+          jsonString = jsonString.replace(/\\t/g, '\t');  // Replace \t with tabs
+          
+          console.log('Decoded JSON string (first 200 chars):', jsonString.substring(0, 200));
+          
+          const decodedData = JSON.parse(jsonString);
           console.log('INIT_DATA parsed successfully:', Object.keys(decodedData));
           
           // Look for draft picks in the parsed data

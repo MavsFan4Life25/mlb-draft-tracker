@@ -106,13 +106,8 @@ class MLBDraftScraper {
       if (initDataMatch) {
         console.log('Found INIT_DATA, attempting to parse...');
         try {
-          // Properly decode the escaped JSON string
-          let jsonString = initDataMatch[1];
-          jsonString = jsonString.replace(/\\"/g, '"');  // Replace \" with "
-          jsonString = jsonString.replace(/\\\\/g, '\\'); // Replace \\ with \
-          jsonString = jsonString.replace(/\\n/g, '\n');  // Replace \n with newlines
-          jsonString = jsonString.replace(/\\t/g, '\t');  // Replace \t with tabs
-          
+          // Use eval to properly decode the JavaScript string (safe in this context)
+          const jsonString = eval('"' + initDataMatch[1] + '"');
           console.log('Decoded JSON string (first 200 chars):', jsonString.substring(0, 200));
           
           const decodedData = JSON.parse(jsonString);

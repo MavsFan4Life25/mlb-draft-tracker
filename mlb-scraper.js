@@ -130,6 +130,21 @@ class MLBDraftScraper {
         }
       });
       
+      // Method 7: Check if draft has actually started
+      console.log('Checking if draft is live...');
+      const draftStatusMatch = response.data.match(/draft.*live|live.*draft|draft.*started|started.*draft/gi);
+      if (draftStatusMatch) {
+        console.log('Draft status indicators found:', draftStatusMatch);
+      } else {
+        console.log('No draft status indicators found - draft may not have started yet');
+      }
+      
+      // Method 8: Look for any text containing "pick" or "draft"
+      const draftTextMatch = response.data.match(/pick|draft/gi);
+      if (draftTextMatch) {
+        console.log('Found draft-related text:', draftTextMatch.length, 'occurrences');
+      }
+      
       // Method 7: Look for any text containing pick numbers
       $('*').each((index, element) => {
         const $el = $(element);

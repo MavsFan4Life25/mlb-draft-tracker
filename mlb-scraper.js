@@ -128,9 +128,16 @@ class MLBDraftScraper {
         console.log('Spotrac response status:', spotracResponse.status);
         const $spotrac = cheerio.load(spotracResponse.data);
         
+        // Debug: Log what tables are found
+        const tables = $spotrac('table');
+        console.log(`Found ${tables.length} tables on Spotrac page`);
+        
         // Look for draft picks in Spotrac tables - be more specific about table selection
         $spotrac('table').each((tableIndex, table) => {
           const $table = $spotrac(table);
+          const rows = $table.find('tr');
+          console.log(`Table ${tableIndex}: Found ${rows.length} rows`);
+          
           $table.find('tr').each((rowIndex, row) => {
             const $row = $spotrac(row);
             const cells = $row.find('td');
@@ -142,14 +149,20 @@ class MLBDraftScraper {
                 return text.replace(/\s+/g, ' ').trim();
               }).get();
               
-              console.log('Spotrac row:', cellTexts);
+              console.log(`Row ${rowIndex}:`, cellTexts);
               
               // Validate that we have meaningful data
-              if (cellTexts.length < 4) return;
+              if (cellTexts.length < 4) {
+                console.log(`Row ${rowIndex}: Skipping - not enough cells`);
+                return;
+              }
               
               // Look for pick number in first column - must be a valid number
               const pickNumberMatch = cellTexts[0].match(/^(\d+)$/);
-              if (!pickNumberMatch) return;
+              if (!pickNumberMatch) {
+                console.log(`Row ${rowIndex}: Skipping - invalid pick number: "${cellTexts[0]}"`);
+                return;
+              }
               
               const pickNumber = pickNumberMatch[1];
               
@@ -158,14 +171,23 @@ class MLBDraftScraper {
               
               // Validate player name - must contain at least 2 words with proper capitalization
               const nameWords = playerName.split(' ').filter(word => word.length > 0);
-              if (nameWords.length < 2) return;
+              if (nameWords.length < 2) {
+                console.log(`Row ${rowIndex}: Skipping - not enough name words: "${playerName}"`);
+                return;
+              }
               
               // Check if first letter of each word is capitalized
               const isValidName = nameWords.every(word => /^[A-Z]/.test(word));
-              if (!isValidName) return;
+              if (!isValidName) {
+                console.log(`Row ${rowIndex}: Skipping - invalid name format: "${playerName}"`);
+                return;
+              }
               
               // Skip if player name is empty or just whitespace
-              if (!playerName || playerName === '') return;
+              if (!playerName || playerName === '') {
+                console.log(`Row ${rowIndex}: Skipping - empty player name`);
+                return;
+              }
               
               // Extract position and school
               const position = cellTexts[2] || 'Unknown';
@@ -181,7 +203,9 @@ class MLBDraftScraper {
               };
               
               draftData.push(pickData);
-              console.log('Added Spotrac pick:', JSON.stringify(pickData));
+              console.log(`Row ${rowIndex}: Added Spotrac pick:`, JSON.stringify(pickData));
+            } else {
+              console.log(`Row ${rowIndex}: Skipping - only ${cells.length} cells`);
             }
           });
         });

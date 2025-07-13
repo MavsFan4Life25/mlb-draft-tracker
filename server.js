@@ -262,7 +262,8 @@ function isDraftTime() {
 
 // Schedule updates
 cron.schedule('*/30 * * * * *', () => {
-  if (isDraftTime()) {
+  // Force updates during draft time, or run every 2 minutes for testing
+  if (isDraftTime() || true) { // Temporarily force updates
     updateData();
   }
 });
@@ -368,6 +369,28 @@ app.get('/api/test', (req, res) => {
     draftPicks: [],
     lastUpdate: new Date().toISOString()
   });
+});
+
+// Manual scraper test endpoint
+app.get('/api/test-scraper', async (req, res) => {
+  try {
+    console.log('Manual scraper test triggered...');
+    const scraper = new MLBDraftScraper();
+    const picks = await scraper.scrapeDraftData();
+    res.json({
+      success: true,
+      picksFound: picks.length,
+      picks: picks,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Manual scraper test failed:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Serve the main page

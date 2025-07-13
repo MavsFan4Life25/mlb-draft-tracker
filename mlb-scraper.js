@@ -101,42 +101,55 @@ class MLBDraftScraper {
         }
       });
 
-      // Method 6: Extract data from INIT_DATA JavaScript variable
-      const initDataMatch = response.data.match(/window\.INIT_DATA\s*=\s*"([^"]+)"/);
-      if (initDataMatch) {
-        console.log('Found INIT_DATA, attempting to parse...');
-        try {
-          // Use eval to properly decode the JavaScript string (safe in this context)
-          const jsonString = eval('"' + initDataMatch[1] + '"');
-          console.log('Decoded JSON string (first 200 chars):', jsonString.substring(0, 200));
-          
-          const decodedData = JSON.parse(jsonString);
-          console.log('INIT_DATA parsed successfully:', Object.keys(decodedData));
-          
-          // Look for draft picks in the parsed data
-          if (decodedData.draftPicks || decodedData.picks || decodedData.selections) {
-            const picks = decodedData.draftPicks || decodedData.picks || decodedData.selections;
-            console.log('Found picks in INIT_DATA:', picks.length);
-            
-            picks.forEach((pick, index) => {
-              if (pick && (pick.playerName || pick.name || pick.player)) {
-                const pickData = {
-                  pickNumber: pick.pickNumber || pick.number || (index + 1).toString(),
-                  playerName: pick.playerName || pick.name || pick.player || 'Unknown',
-                  position: pick.position || pick.pos || 'Unknown',
-                  school: pick.school || pick.college || 'Unknown',
-                  team: pick.team || pick.franchise || 'TBD',
-                  timestamp: new Date().toISOString()
-                };
-                draftData.push(pickData);
-                console.log('Added pick:', pickData);
-              }
-            });
-          }
-        } catch (parseError) {
-          console.log('Failed to parse INIT_DATA:', parseError.message);
+      // Method 6: Look for draft data in the raw HTML
+      console.log('Searching for draft data patterns in HTML...');
+      
+      // Look for patterns like "Pick 1:", "1st Round:", etc.
+      const pickPatterns = [
+        /(\d+)(?:st|nd|rd|th)?\s*(?:Round|Pick)?\s*[:.]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+        /Pick\s*(\d+)\s*[:.]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+        /(\d+)\.\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/g
+      ];
+      
+      pickPatterns.forEach((pattern, index) => {
+        const matches = response.data.match(pattern);
+        if (matches) {
+          console.log(`Pattern ${index + 1} found matches:`, matches.length);
+          matches.forEach(match => {
+            console.log('Found pick match:', match);
+            const pickData = {
+              pickNumber: match[1] || 'Unknown',
+              playerName: match[2] || 'Unknown',
+              position: 'Unknown',
+              school: 'Unknown',
+              team: 'TBD',
+              timestamp: new Date().toISOString()
+            };
+            draftData.push(pickData);
+          });
         }
-      }
+      });
+      
+      // Method 7: Look for any text containing pick numbers
+      $('*').each((index, element) => {
+        const $el = $(element);
+        const text = $el.text().trim();
+        
+        // Look for patterns like "1.", "2.", "3." followed by names
+        const pickMatch = text.match(/(\d+)\.\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+        if (pickMatch) {
+          console.log('Found pick pattern:', pickMatch[0]);
+          const pickData = {
+            pickNumber: pickMatch[1],
+            playerName: pickMatch[2],
+            position: 'Unknown',
+            school: 'Unknown',
+            team: 'TBD',
+            timestamp: new Date().toISOString()
+          };
+          draftData.push(pickData);
+        }
+      });
 
       // Method 7: Look for any text containing pick numbers
       $('*').each((index, element) => {

@@ -25,8 +25,15 @@ class MLBDraftScraper {
         timeout: 15000
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response length:', response.data.length);
+      
       const $ = cheerio.load(response.data);
       const draftData = [];
+      
+      // Debug: Log the page title and some content
+      console.log('Page title:', $('title').text());
+      console.log('First 500 chars of body:', $('body').text().substring(0, 500));
 
       // Method 1: Look for draft pick containers
       $('[class*="draft"], [class*="pick"], [class*="round"]').each((index, element) => {
@@ -77,6 +84,41 @@ class MLBDraftScraper {
           if (jsonData && jsonData.length > 0) {
             draftData.push(...jsonData);
           }
+        }
+      });
+
+      // Method 5: Look for specific MLB draft tracker elements
+      $('[class*="draft-pick"], [class*="pick-card"], [class*="draft-card"]').each((index, element) => {
+        const $el = $(element);
+        const text = $el.text().trim();
+        console.log('Found draft element:', text.substring(0, 100));
+        
+        if (this.isDraftPickText(text)) {
+          const pickData = this.parseDraftPickText(text);
+          if (pickData) {
+            draftData.push(pickData);
+          }
+        }
+      });
+
+      // Method 6: Look for any text containing pick numbers
+      $('*').each((index, element) => {
+        const $el = $(element);
+        const text = $el.text().trim();
+        
+        // Look for patterns like "1.", "2.", "3." followed by names
+        const pickMatch = text.match(/(\d+)\.\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+        if (pickMatch) {
+          console.log('Found pick pattern:', pickMatch[0]);
+          const pickData = {
+            pickNumber: pickMatch[1],
+            playerName: pickMatch[2],
+            position: 'Unknown',
+            school: 'Unknown',
+            team: 'TBD',
+            timestamp: new Date().toISOString()
+          };
+          draftData.push(pickData);
         }
       });
 

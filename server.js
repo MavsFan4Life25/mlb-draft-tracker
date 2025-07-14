@@ -508,15 +508,28 @@ app.get('/api/debug-mlb-api', async (req, res) => {
     let totalPicks = 0;
     let draftedPicks = [];
     
+    console.log('Full API response structure:', JSON.stringify(data, null, 2).substring(0, 2000));
+    
     if (data.drafts && Array.isArray(data.drafts)) {
+      console.log('Found drafts array with length:', data.drafts.length);
+      
       data.drafts.forEach((draft, index) => {
+        console.log(`Draft ${index} keys:`, Object.keys(draft));
+        
         if (draft.rounds && Array.isArray(draft.rounds)) {
+          console.log(`Draft ${index} has ${draft.rounds.length} rounds`);
+          
           draft.rounds.forEach((round, roundIndex) => {
+            console.log(`Round ${roundIndex} keys:`, Object.keys(round));
+            
             if (round.picks && Array.isArray(round.picks)) {
+              console.log(`Round ${roundIndex} has ${round.picks.length} total picks`);
+              
               const roundDraftedPicks = round.picks.filter(pick => pick.isDrafted);
-              totalPicks += roundDraftedPicks.length;
+              console.log(`Round ${roundIndex} has ${roundDraftedPicks.length} drafted picks`);
               
               roundDraftedPicks.forEach(pick => {
+                console.log('Drafted pick:', pick);
                 draftedPicks.push({
                   pickNumber: pick.pickNumber,
                   playerName: pick.person?.fullName,
@@ -525,10 +538,16 @@ app.get('/api/debug-mlb-api', async (req, res) => {
                   position: pick.person?.primaryPosition?.name
                 });
               });
+            } else {
+              console.log(`Round ${roundIndex} has no picks array`);
             }
           });
+        } else {
+          console.log(`Draft ${index} has no rounds array`);
         }
       });
+    } else {
+      console.log('No drafts array found in response');
     }
     
     res.json({
@@ -536,6 +555,7 @@ app.get('/api/debug-mlb-api', async (req, res) => {
       totalPicks: totalPicks,
       draftedPicks: draftedPicks.slice(0, 10), // Show first 10 picks
       responseKeys: Object.keys(data),
+      fullResponse: JSON.stringify(data, null, 2).substring(0, 3000), // Show first 3000 chars
       timestamp: new Date().toISOString()
     });
   } catch (error) {

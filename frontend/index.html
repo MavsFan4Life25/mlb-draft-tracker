@@ -375,6 +375,13 @@
             color: var(--primary-white);
         }
 
+        .position {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85rem;
+            min-width: 80px;
+            font-weight: 500;
+        }
+
         .school-name {
             color: rgba(255, 255, 255, 0.7);
             font-size: 0.85rem;
@@ -856,6 +863,7 @@
                             ${pick.playerName}
                             ${rankBadge}
                         </span>
+                        <span class="position">${playerData && playerData.Position ? playerData.Position : 'N/A'}</span>
                         <span class="school-name">${playerData && playerData.School ? playerData.School : 'N/A'}</span>
                         <span class="team-name">${pick.team}</span>
                         <span class="pick-time">${new Date(pick.timestamp).toLocaleTimeString()}</span>

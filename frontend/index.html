@@ -822,6 +822,9 @@
             const tickerContainer = document.getElementById('draftTicker');
             if (!tickerContainer) return;
             
+            console.log('updateDraftTicker called with', draftPicks.length, 'picks');
+            console.log('Latest picks:', draftPicks.slice(-5).map(p => `${p.pickNumber}: ${p.playerName}`));
+            
             // Update the timestamp in the header
             const statusElement = document.querySelector('.ticker-status span:last-child');
             if (statusElement && statusElement.textContent === 'LIVE') {
@@ -883,8 +886,41 @@
         
         function updateDraftPicks(picks) {
             console.log('updateDraftPicks called with:', picks ? picks.length : 'null', 'picks');
-            draftPicks = picks || [];
-            updateDraftTicker();
+            
+            if (!picks || picks.length === 0) {
+                draftPicks = [];
+                updateDraftTicker();
+                return;
+            }
+            
+            // Check if we're missing picks
+            const currentMaxPick = draftPicks.length > 0 ? Math.max(...draftPicks.map(p => parseInt(p.pickNumber))) : 0;
+            const newMaxPick = Math.max(...picks.map(p => parseInt(p.pickNumber)));
+            
+            console.log('Current max pick:', currentMaxPick, 'New max pick:', newMaxPick);
+            
+            if (newMaxPick > currentMaxPick) {
+                console.log('New picks detected! Current:', currentMaxPick, 'New:', newMaxPick);
+                
+                // Check for missing picks
+                const expectedPicks = [];
+                for (let i = 1; i <= newMaxPick; i++) {
+                    const pick = picks.find(p => parseInt(p.pickNumber) === i);
+                    if (pick) {
+                        expectedPicks.push(pick);
+                    } else {
+                        console.warn('Missing pick number:', i);
+                    }
+                }
+                
+                console.log('Expected picks:', expectedPicks.length, 'vs received:', picks.length);
+                
+                // Use the complete picks array to ensure no gaps
+                draftPicks = picks;
+                updateDraftTicker();
+            } else {
+                console.log('No new picks detected, keeping current data');
+            }
         }
         
         // Update ticker when new data comes in
@@ -902,7 +938,13 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('Manual refresh data:', data);
+                    console.log('Current draftPicks length:', draftPicks.length);
+                    console.log('New picks length:', data.picks ? data.picks.length : 0);
                     if (data.picks) {
+                        // Check if we have new picks
+                        if (data.picks.length > draftPicks.length) {
+                            console.log('New picks detected! Updating ticker...');
+                        }
                         updateDraftPicks(data.picks);
                     }
                 })
@@ -911,8 +953,75 @@
                 });
         }
         
-        // Auto-refresh every 30 seconds as backup
-        setInterval(refreshDraftData, 30000);
+        // Auto-refresh every 10 seconds as backup
+        setInterval(refreshDraftData, 10000);
+        
+        // Debug function to check server state
+        function debugServerState() {
+            console.log('=== DEBUG SERVER STATE ===');
+            console.log('Current ticker picks:', draftPicks.length);
+            console.log('Current ticker latest pick:', draftPicks.length > 0 ? draftPicks[draftPicks.length - 1].pickNumber : 'none');
+            
+            // Check for missing picks
+            if (draftPicks.length > 0) {
+                const pickNumbers = draftPicks.map(p => parseInt(p.pickNumber)).sort((a, b) => a - b);
+                console.log('Current pick numbers:', pickNumbers);
+                
+                // Find gaps
+                const gaps = [];
+                for (let i = 1; i <= Math.max(...pickNumbers); i++) {
+                    if (!pickNumbers.includes(i)) {
+                        gaps.push(i);
+                    }
+                }
+                if (gaps.length > 0) {
+                    console.warn('Missing pick numbers:', gaps);
+                } else {
+                    console.log('No gaps detected in pick numbers');
+                }
+            }
+            
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Server health:', data);
+                    console.log('Server picks count:', data.picksCount);
+                })
+                .catch(error => {
+                    console.error('Health check failed:', error);
+                });
+        }
+        
+        // Add debug button to header
+        setTimeout(() => {
+            const tickerHeader = document.querySelector('.ticker-header');
+            if (tickerHeader) {
+                const debugButton = document.createElement('button');
+                debugButton.textContent = 'Debug';
+                debugButton.onclick = debugServerState;
+                debugButton.style.cssText = 'margin-left: 10px; padding: 4px 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem;';
+                tickerHeader.querySelector('.ticker-status').appendChild(debugButton);
+                
+                const recoverButton = document.createElement('button');
+                recoverButton.textContent = 'Recover';
+                recoverButton.onclick = () => {
+                    console.log('Forcing complete data recovery...');
+                    fetch('/api/players')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Complete data recovery:', data);
+                            if (data.draftPicks) {
+                                updateDraftPicks(data.draftPicks);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Recovery failed:', error);
+                        });
+                };
+                recoverButton.style.cssText = 'margin-left: 10px; padding: 4px 8px; background: rgba(255,0,0,0.2); border: 1px solid rgba(255,0,0,0.3); border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem;';
+                tickerHeader.querySelector('.ticker-status').appendChild(recoverButton);
+            }
+        }, 1000);
     </script>
 </body>
 </html> 

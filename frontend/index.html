@@ -446,6 +446,7 @@
                 <div class="ticker-status">
                     <span class="status-dot"></span>
                     <span>LIVE</span>
+                    <button onclick="refreshDraftData()" style="margin-left: 10px; padding: 4px 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem;">Refresh</button>
                 </div>
             </div>
             <div id="draftTicker" class="draft-ticker">
@@ -821,6 +822,12 @@
             const tickerContainer = document.getElementById('draftTicker');
             if (!tickerContainer) return;
             
+            // Update the timestamp in the header
+            const statusElement = document.querySelector('.ticker-status span:last-child');
+            if (statusElement && statusElement.textContent === 'LIVE') {
+                statusElement.textContent = `LIVE - Updated ${new Date().toLocaleTimeString()}`;
+            }
+            
             if (draftPicks.length === 0) {
                 tickerContainer.innerHTML = '<div class="ticker-item">No draft picks available yet...</div>';
                 return;
@@ -875,16 +882,37 @@
         }
         
         function updateDraftPicks(picks) {
+            console.log('updateDraftPicks called with:', picks ? picks.length : 'null', 'picks');
             draftPicks = picks || [];
             updateDraftTicker();
         }
         
         // Update ticker when new data comes in
         socket.on('dataUpdate', function(data) {
+            console.log('Socket dataUpdate received:', data);
             if (data.draftPicks) {
                 updateDraftPicks(data.draftPicks);
             }
         });
+        
+        // Manual refresh function for debugging
+        function refreshDraftData() {
+            console.log('Manual refresh triggered...');
+            fetch('/api/draft-picks')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Manual refresh data:', data);
+                    if (data.picks) {
+                        updateDraftPicks(data.picks);
+                    }
+                })
+                .catch(error => {
+                    console.error('Manual refresh failed:', error);
+                });
+        }
+        
+        // Auto-refresh every 30 seconds as backup
+        setInterval(refreshDraftData, 30000);
     </script>
 </body>
 </html> 

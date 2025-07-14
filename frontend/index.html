@@ -300,6 +300,109 @@
             padding: 3rem;
             opacity: 0.7;
         }
+
+        /* Live Draft Ticker Styles */
+        .draft-ticker-container {
+            margin-top: 3rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+        }
+
+        .ticker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .ticker-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .ticker-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .draft-ticker {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .ticker-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .ticker-item:last-child {
+            border-bottom: none;
+        }
+
+        .pick-number {
+            background: var(--uga-red);
+            color: var(--primary-white);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .player-name {
+            font-weight: 600;
+            font-size: 1rem;
+            flex: 1;
+        }
+
+        .team-name {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+
+        .pick-time {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+
+        /* Scrollbar styling for ticker */
+        .draft-ticker::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .draft-ticker::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .draft-ticker::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .draft-ticker::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -371,6 +474,20 @@
         <div id="noResults" class="no-results" style="display: none;">
             <i class="fas fa-search"></i>
             <p>No players found matching your criteria</p>
+        </div>
+        
+        <!-- Live Draft Ticker -->
+        <div class="draft-ticker-container">
+            <div class="ticker-header">
+                <h3><i class="fas fa-broadcast-tower"></i> Live Draft Picks</h3>
+                <div class="ticker-status">
+                    <span class="status-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div id="draftTicker" class="draft-ticker">
+                <div class="ticker-item">Loading draft picks...</div>
+            </div>
         </div>
     </div>
 
@@ -469,6 +586,12 @@
             }
             allPlayers = data.players || [];
             console.log('allPlayers set to:', allPlayers.length, 'players');
+            
+            // Update draft picks if available
+            if (data.draftPicks) {
+                updateDraftPicks(data.draftPicks);
+            }
+            
             updateStats();
             populatePositionFilter();
             filterPlayers();
@@ -660,6 +783,44 @@
 
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', init);
+
+        // Live Draft Ticker
+        let draftPicks = [];
+        
+        function updateDraftTicker() {
+            const tickerContainer = document.getElementById('draftTicker');
+            if (!tickerContainer) return;
+            
+            if (draftPicks.length === 0) {
+                tickerContainer.innerHTML = '<div class="ticker-item">No draft picks available yet...</div>';
+                return;
+            }
+            
+            // Show the 10 most recent picks
+            const recentPicks = draftPicks.slice(-10).reverse();
+            const tickerHtml = recentPicks.map(pick => `
+                <div class="ticker-item">
+                    <span class="pick-number">#${pick.pickNumber}</span>
+                    <span class="player-name">${pick.playerName}</span>
+                    <span class="team-name">${pick.team}</span>
+                    <span class="pick-time">${new Date(pick.timestamp).toLocaleTimeString()}</span>
+                </div>
+            `).join('');
+            
+            tickerContainer.innerHTML = tickerHtml;
+        }
+        
+        function updateDraftPicks(picks) {
+            draftPicks = picks || [];
+            updateDraftTicker();
+        }
+        
+        // Update ticker when new data comes in
+        socket.on('dataUpdate', function(data) {
+            if (data.draftPicks) {
+                updateDraftPicks(data.draftPicks);
+            }
+        });
     </script>
 </body>
 </html> 

@@ -386,6 +386,17 @@
             font-family: monospace;
         }
 
+        .rank-badge {
+            background: var(--success-green);
+            color: var(--primary-white);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            display: inline-block;
+        }
+
         /* Scrollbar styling for ticker */
         .draft-ticker::-webkit-scrollbar {
             width: 6px;
@@ -799,14 +810,46 @@
             
             // Show the 10 most recent picks
             const recentPicks = draftPicks.slice(-10).reverse();
-            const tickerHtml = recentPicks.map(pick => `
-                <div class="ticker-item">
-                    <span class="pick-number">#${pick.pickNumber}</span>
-                    <span class="player-name">${pick.playerName}</span>
-                    <span class="team-name">${pick.team}</span>
-                    <span class="pick-time">${new Date(pick.timestamp).toLocaleTimeString()}</span>
-                </div>
-            `).join('');
+            const tickerHtml = recentPicks.map(pick => {
+                // Find the player in our data to get their rank
+                const playerData = allPlayers.find(player => {
+                    const playerName = player.Name ? player.Name.toLowerCase().trim() : '';
+                    const pickName = pick.playerName ? pick.playerName.toLowerCase().trim() : '';
+                    
+                    // Try exact match first
+                    if (playerName === pickName) return true;
+                    
+                    // Try first/last name match
+                    const playerParts = playerName.split(' ').filter(part => part.length > 0);
+                    const pickParts = pickName.split(' ').filter(part => part.length > 0);
+                    
+                    if (playerParts.length >= 2 && pickParts.length >= 2) {
+                        const playerFirst = playerParts[0];
+                        const playerLast = playerParts[playerParts.length - 1];
+                        const pickFirst = pickParts[0];
+                        const pickLast = pickParts[pickParts.length - 1];
+                        
+                        if (playerFirst === pickFirst && playerLast === pickLast) return true;
+                    }
+                    
+                    return false;
+                });
+                
+                const rankBadge = playerData && playerData.Rank ? 
+                    `<span class="rank-badge">#${playerData.Rank}</span>` : '';
+                
+                return `
+                    <div class="ticker-item">
+                        <span class="pick-number">#${pick.pickNumber}</span>
+                        <span class="player-name">
+                            ${pick.playerName}
+                            ${rankBadge}
+                        </span>
+                        <span class="team-name">${pick.team}</span>
+                        <span class="pick-time">${new Date(pick.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                `;
+            }).join('');
             
             tickerContainer.innerHTML = tickerHtml;
         }

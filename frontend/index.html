@@ -414,6 +414,137 @@
         .draft-ticker::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.5);
         }
+
+        /* Draft Pick Notification Styles */
+        .draft-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .notification-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 2px solid var(--success-green);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 350px;
+            overflow: hidden;
+        }
+
+        .notification-header {
+            background: var(--success-green);
+            color: var(--primary-white);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .close-notification {
+            background: none;
+            border: none;
+            color: var(--primary-white);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s ease;
+        }
+
+        .close-notification:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .notification-body {
+            padding: 1.5rem;
+            color: var(--dark-gray);
+        }
+
+        .player-draft-info {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .draft-pick-number {
+            background: var(--uga-red);
+            color: var(--primary-white);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark-gray);
+            margin-bottom: 0.25rem;
+        }
+
+        .draft-team {
+            font-size: 1rem;
+            color: var(--medium-gray);
+            font-weight: 500;
+        }
+
+        .player-details {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding-top: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: var(--medium-gray);
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: var(--dark-gray);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -499,6 +630,37 @@
             <div class="stat-card">
                 <div class="stat-number" id="totalPicks">0</div>
                 <div class="stat-label">Total Draft Picks</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Draft Pick Notification Popup -->
+    <div id="draftNotification" class="draft-notification" style="display: none;">
+        <div class="notification-content">
+            <div class="notification-header">
+                <h3><i class="fas fa-trophy"></i> PLAYER DRAFTED!</h3>
+                <button class="close-notification" onclick="closeNotification()">×</button>
+            </div>
+            <div class="notification-body">
+                <div class="player-draft-info">
+                    <div class="draft-pick-number">#<span id="notificationPickNumber">0</span></div>
+                    <div class="player-name" id="notificationPlayerName">Player Name</div>
+                    <div class="draft-team" id="notificationTeam">Team Name</div>
+                </div>
+                <div class="player-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Position:</span>
+                        <span class="detail-value" id="notificationPosition">N/A</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">School:</span>
+                        <span class="detail-value" id="notificationSchool">N/A</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Rank:</span>
+                        <span class="detail-value" id="notificationRank">N/A</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -859,10 +1021,92 @@
             updateDraftTicker();
         }
         
+        // Draft Pick Notification Functions
+        let previousPickCount = 0;
+        let notificationTimeout = null;
+
+        function showDraftNotification(pick) {
+            // Find the player in our data to get their details
+            const playerData = allPlayers.find(player => {
+                const playerName = player.Name ? player.Name.toLowerCase().trim() : '';
+                const pickName = pick.playerName ? pick.playerName.toLowerCase().trim() : '';
+                
+                // Try exact match first
+                if (playerName === pickName) return true;
+                
+                // Try first/last name match
+                const playerParts = playerName.split(' ').filter(part => part.length > 0);
+                const pickParts = pickName.split(' ').filter(part => part.length > 0);
+                
+                if (playerParts.length >= 2 && pickParts.length >= 2) {
+                    const playerFirst = playerParts[0];
+                    const playerLast = playerParts[playerParts.length - 1];
+                    const pickFirst = pickParts[0];
+                    const pickLast = pickParts[pickParts.length - 1];
+                    
+                    if (playerFirst === pickFirst && playerLast === pickLast) return true;
+                }
+                
+                return false;
+            });
+
+            // Update notification content
+            document.getElementById('notificationPickNumber').textContent = pick.pickNumber;
+            document.getElementById('notificationPlayerName').textContent = pick.playerName;
+            document.getElementById('notificationTeam').textContent = pick.team;
+            
+            if (playerData) {
+                document.getElementById('notificationPosition').textContent = playerData.Position || 'N/A';
+                document.getElementById('notificationSchool').textContent = playerData.School || 'N/A';
+                document.getElementById('notificationRank').textContent = playerData.Rank || 'N/A';
+            } else {
+                document.getElementById('notificationPosition').textContent = 'N/A';
+                document.getElementById('notificationSchool').textContent = 'N/A';
+                document.getElementById('notificationRank').textContent = 'N/A';
+            }
+
+            // Show notification
+            const notification = document.getElementById('draftNotification');
+            notification.style.display = 'block';
+            notification.style.animation = 'slideInRight 0.5s ease-out';
+
+            // Auto-hide after 5 seconds
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+            notificationTimeout = setTimeout(() => {
+                closeNotification();
+            }, 5000);
+        }
+
+        function closeNotification() {
+            const notification = document.getElementById('draftNotification');
+            notification.style.animation = 'slideOutRight 0.5s ease-out';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 500);
+            
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+                notificationTimeout = null;
+            }
+        }
+
+        // Check for new draft picks and show notifications
+        function checkForNewPicks(newPicks) {
+            if (newPicks.length > previousPickCount) {
+                // Get the newest pick(s)
+                const newPick = newPicks[newPicks.length - 1];
+                showDraftNotification(newPick);
+            }
+            previousPickCount = newPicks.length;
+        }
+
         // Update ticker when new data comes in
         socket.on('dataUpdate', function(data) {
             if (data.draftPicks) {
                 updateDraftPicks(data.draftPicks);
+                checkForNewPicks(data.draftPicks);
             }
         });
     </script>

@@ -232,6 +232,35 @@ function updatePlayerDraftStatus(players, picks) {
         }
       }
       
+      // Try fuzzy matching for common variations
+      const normalizedPickName = pickName.replace(/\s+/g, ' ').trim();
+      const normalizedPlayerName = playerName.replace(/\s+/g, ' ').trim();
+      
+      if (normalizedPickName === normalizedPlayerName) {
+        console.log(`Normalized match: ${playerName} = ${pickName}`);
+        return true;
+      }
+      
+      // Handle specific cases like "JoJo" vs "Jo Jo" and "Holliday" vs "Holiday"
+      const pickNameNormalized = pickName.replace(/([A-Z])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').trim();
+      const playerNameNormalized = playerName.replace(/([A-Z])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').trim();
+      
+      if (pickNameNormalized === playerNameNormalized) {
+        console.log(`Special case match: ${playerName} = ${pickName}`);
+        return true;
+      }
+      
+      // Handle "Holliday" vs "Holiday" specifically
+      if (pickName.includes('holliday') && playerName.includes('holiday')) {
+        console.log(`Holliday/Holiday match: ${playerName} = ${pickName}`);
+        return true;
+      }
+      
+      if (playerName.includes('holliday') && pickName.includes('holiday')) {
+        console.log(`Holiday/Holliday match: ${playerName} = ${pickName}`);
+        return true;
+      }
+      
       // Only try school matching if we have school info from the pick
       if (pick.school && playerSchool) {
         const pickSchool = pick.school.toLowerCase().trim();

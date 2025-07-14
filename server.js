@@ -510,44 +510,35 @@ app.get('/api/debug-mlb-api', async (req, res) => {
     
     console.log('Full API response structure:', JSON.stringify(data, null, 2).substring(0, 2000));
     
-    if (data.drafts && Array.isArray(data.drafts)) {
-      console.log('Found drafts array with length:', data.drafts.length);
+    if (data.drafts && data.drafts.rounds && Array.isArray(data.drafts.rounds)) {
+      console.log('Found drafts object with rounds array, length:', data.drafts.rounds.length);
       
-      data.drafts.forEach((draft, index) => {
-        console.log(`Draft ${index} keys:`, Object.keys(draft));
+      data.drafts.rounds.forEach((round, roundIndex) => {
+        console.log(`Round ${roundIndex} keys:`, Object.keys(round));
         
-        if (draft.rounds && Array.isArray(draft.rounds)) {
-          console.log(`Draft ${index} has ${draft.rounds.length} rounds`);
+        if (round.picks && Array.isArray(round.picks)) {
+          console.log(`Round ${roundIndex} has ${round.picks.length} total picks`);
           
-          draft.rounds.forEach((round, roundIndex) => {
-            console.log(`Round ${roundIndex} keys:`, Object.keys(round));
-            
-            if (round.picks && Array.isArray(round.picks)) {
-              console.log(`Round ${roundIndex} has ${round.picks.length} total picks`);
-              
-              const roundDraftedPicks = round.picks.filter(pick => pick.isDrafted);
-              console.log(`Round ${roundIndex} has ${roundDraftedPicks.length} drafted picks`);
-              
-              roundDraftedPicks.forEach(pick => {
-                console.log('Drafted pick:', pick);
-                draftedPicks.push({
-                  pickNumber: pick.pickNumber,
-                  playerName: pick.person?.fullName,
-                  team: pick.team?.name,
-                  school: pick.school?.name,
-                  position: pick.person?.primaryPosition?.name
-                });
-              });
-            } else {
-              console.log(`Round ${roundIndex} has no picks array`);
-            }
+          const roundDraftedPicks = round.picks.filter(pick => pick.isDrafted);
+          console.log(`Round ${roundIndex} has ${roundDraftedPicks.length} drafted picks`);
+          totalPicks += roundDraftedPicks.length;
+          
+          roundDraftedPicks.forEach(pick => {
+            console.log('Drafted pick:', pick.person?.fullName, '-', pick.team?.name);
+            draftedPicks.push({
+              pickNumber: pick.pickNumber,
+              playerName: pick.person?.fullName,
+              team: pick.team?.name,
+              school: pick.school?.name,
+              position: pick.person?.primaryPosition?.name
+            });
           });
         } else {
-          console.log(`Draft ${index} has no rounds array`);
+          console.log(`Round ${roundIndex} has no picks array`);
         }
       });
     } else {
-      console.log('No drafts array found in response');
+      console.log('No drafts.rounds array found in response');
     }
     
     res.json({

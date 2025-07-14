@@ -27,31 +27,26 @@ class MLBDraftScraper {
       
       console.log('StatsAPI response structure:', Object.keys(data));
       
-      if (!data || !data.drafts || !Array.isArray(data.drafts) || data.drafts.length === 0) {
+      if (!data || !data.drafts || !data.drafts.rounds || !Array.isArray(data.drafts.rounds) || data.drafts.rounds.length === 0) {
         throw new Error('No draft data in StatsAPI response');
       }
       
       const picks = [];
-      for (const draft of data.drafts) {
-        console.log('Draft structure:', Object.keys(draft));
-        if (draft.rounds && Array.isArray(draft.rounds)) {
-          for (const round of draft.rounds) {
-            console.log('Round structure:', Object.keys(round));
-            if (round.picks && Array.isArray(round.picks)) {
-              for (const pick of round.picks) {
-                console.log('Pick structure:', Object.keys(pick));
-                if (pick && pick.pickNumber && pick.person && pick.person.fullName && pick.isDrafted) {
-                  picks.push({
-                    pickNumber: pick.pickNumber,
-                    playerName: pick.person.fullName,
-                    position: pick.person.primaryPosition ? pick.person.primaryPosition.name : 'Unknown',
-                    school: pick.school ? pick.school.name : 'Unknown',
-                    team: pick.team && pick.team.name ? pick.team.name : 'Unknown',
-                    timestamp: new Date().toISOString()
-                  });
-                  console.log(`Added pick: ${pick.person.fullName} - ${pick.team.name}`);
-                }
-              }
+      for (const round of data.drafts.rounds) {
+        console.log('Round structure:', Object.keys(round));
+        if (round.picks && Array.isArray(round.picks)) {
+          for (const pick of round.picks) {
+            console.log('Pick structure:', Object.keys(pick));
+            if (pick && pick.pickNumber && pick.person && pick.person.fullName && pick.isDrafted) {
+              picks.push({
+                pickNumber: pick.pickNumber,
+                playerName: pick.person.fullName,
+                position: pick.person.primaryPosition ? pick.person.primaryPosition.name : 'Unknown',
+                school: pick.school ? pick.school.name : 'Unknown',
+                team: pick.team && pick.team.name ? pick.team.name : 'Unknown',
+                timestamp: new Date().toISOString()
+              });
+              console.log(`Added pick: ${pick.person.fullName} - ${pick.team.name}`);
             }
           }
         }
